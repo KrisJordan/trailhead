@@ -14,8 +14,7 @@
     "remoteUser": "vscode",
     "containerUser": "vscode",
     "forwardPorts": [
-        1100,
-        8000
+        1110
     ],
     "customizations": {
         "vscode": {

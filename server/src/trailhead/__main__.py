@@ -3,7 +3,7 @@ from .app import app
 
 
 def main() -> int:
-    return uvicorn.run(app, host="0.0.0.0", port=1100)
+    return uvicorn.run(app, host="0.0.0.0", port=1109)
 
 
 if __name__ == "__main__":
