@@ -1,0 +1,53 @@
+/* Do not modify this file! */
+{
+    "name": "Trailhead",
+    "dockerFile": "../Dockerfile",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "mounts": [
+        {
+            "source": "trailhead_dev_node_modules",
+            "target": "/workspace/client/node_modules",
+            "type": "volume"
+        }
+    ],
+    "workspaceFolder": "/workspace",
+    "remoteUser": "vscode",
+    "containerUser": "vscode",
+    "forwardPorts": [
+        1100,
+        8000
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.black-formatter",
+                "ms-python.flake8",
+                "ms-toolsai.jupyter"
+            ],
+            "settings": {
+                "files.autoSave": "onWindowChange",
+                "editor.formatOnSave": true,
+                "editor.formatOnSaveMode": "file",
+                "[python]": {
+                    "editor.defaultFormatter": "ms-python.black-formatter",
+                    "editor.formatOnSave": true
+                },
+                "python.defaultInterpreterPath": "/usr/bin/python3",
+                "python.testing.pytestEnabled": true,
+                "python.testing.unittestEnabled": false,
+                "python.analysis.diagnosticSeverityOverrides": {
+                    "reportMissingParameterType": "error",
+                    "reportGeneralTypeIssues": "error",
+                    "reportDeprecated": "error",
+                    "reportImportCycles": "error"
+                }
+            }
+        }
+    },
+    "runArgs": [
+        "--name",
+        "trailhead_dev"
+    ]
+}

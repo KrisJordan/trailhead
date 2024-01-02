@@ -1,0 +1,21 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import os
+import subprocess
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+print(ROOT_DIR)
+
+# Delete dist directory, if it exists
+subprocess.run(["rm", "-rf", f"{ROOT_DIR}/dist"])
+
+# Recreate dist directory
+subprocess.run(["mkdir", "-p", f"{ROOT_DIR}/dist"])
+
+# Copy python server
+subprocess.run(["cp", "-r", f"{ROOT_DIR}/server/src/trailhead", f"{ROOT_DIR}/dist"])
+
+# Build client
+os.chdir(f"{ROOT_DIR}/client")
+subprocess.run(["npm", "run", "build"])
