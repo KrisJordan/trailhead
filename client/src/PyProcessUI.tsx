@@ -171,7 +171,7 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
                     case 'stderr':
                         return <StdErrMessage key={idx} line={line.line} />;
                     case 'stdout_group':
-                        return <StdOutGroupContainer key={idx} group={line} minGroupSize={10} groupAfterRatePerSecond={10} />
+                        return <StdOutGroupContainer key={idx} group={line} minGroupSize={100} groupAfterRatePerSecond={60} />
                 }
             })}
         </div>
@@ -179,16 +179,6 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
         <input type="radio" name="module_tabs" role="tab" className="tab" aria-label="Interact" />
         <div role="tabpanel" className="tab-content prose-lg border-base-300 rounded-box p-6 bg-base-100">
             <p>Interact (REPL)</p>
-        </div>
-
-        <input type="radio" name="module_tabs" role="tab" className="tab" aria-label="Explore" />
-        <div role="tabpanel" className="tab-content prose-lg border-base-300 rounded-box p-6 bg-base-100">
-            <p>Explorer (Function Caller)</p>
-        </div>
-
-        <input type="radio" name="module_tabs" role="tab" className="tab" aria-label="Test" />
-        <div role="tabpanel" className="tab-content prose-lg border-base-300 rounded-box p-6 bg-base-100">
-            <p>Test (Pytest)</p>
         </div>
     </div>;
 }
