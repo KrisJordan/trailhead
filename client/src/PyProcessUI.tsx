@@ -144,9 +144,9 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
         runAgainButton = <button onClick={runAgain} className="btn btn-primary ml-6">Run Again</button>;
     }
 
-    return <div role="tablist" className="tabs tabs-lifted tabs-lg">
+    return <div role="tablist" className="tabs tabs-lifted tabs-lg w-full">
         <input type="radio" name="module_tabs" role="tab" className="tab" aria-label="Run" defaultChecked={true} />
-        <div role="tabpanel" className="tab-content prose prose-lg border-base-300 rounded-box p-6">
+        <div role="tabpanel" className="tab-active tab-content prose-lg border-base-300 rounded-box p-6 bg-base-100 w-full">
             <div>
                 <div className={statusBadgeClass}>{status}</div>
                 {runAgainButton}
@@ -156,10 +156,13 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
                 switch (line.type) {
                     case 'stdin':
                         if (line.response === undefined) {
-                            return <p key={idx}>{line.prompt}<br />
-                                <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx, line); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info w-full max-w-xs"></input>
-                                <button onClick={() => handleStdInSend(idx, line)} className="btn btn-primary ml-4">Send</button>
-                            </p>
+                            return <div key={idx}>
+                                {line.prompt}
+                                <div className="flex">
+                                    <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx, line); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
+                                    <button onClick={() => handleStdInSend(idx, line)} className="btn btn-primary ml-4">Send</button>
+                                </div>
+                            </div>
                         } else {
                             return <p key={idx}>{line.prompt}<br />
                                 <input autoFocus={true} type="text" className="input input-bordered w-full max-w-xs" value={line.response} disabled={true}></input>
@@ -174,17 +177,17 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
         </div>
 
         <input type="radio" name="module_tabs" role="tab" className="tab" aria-label="Interact" />
-        <div role="tabpanel" className="tab-content prose prose-lg border-base-300 rounded-box p-6">
+        <div role="tabpanel" className="tab-content prose-lg border-base-300 rounded-box p-6 bg-base-100">
             <p>Interact (REPL)</p>
         </div>
 
         <input type="radio" name="module_tabs" role="tab" className="tab" aria-label="Explore" />
-        <div role="tabpanel" className="tab-content prose prose-lg border-base-300 rounded-box p-6">
+        <div role="tabpanel" className="tab-content prose-lg border-base-300 rounded-box p-6 bg-base-100">
             <p>Explorer (Function Caller)</p>
         </div>
 
         <input type="radio" name="module_tabs" role="tab" className="tab" aria-label="Test" />
-        <div role="tabpanel" className="tab-content prose prose-lg border-base-300 rounded-box p-6">
+        <div role="tabpanel" className="tab-content prose-lg border-base-300 rounded-box p-6 bg-base-100">
             <p>Test (Pytest)</p>
         </div>
     </div>;

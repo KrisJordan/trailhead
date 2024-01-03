@@ -60,7 +60,7 @@ function App() {
             <div className={`flex-none ${!showFiles && 'hidden'}`}>
                 <NamespaceTree selectModule={routeToModuleRunner} />
             </div>
-            <div className="flex-1 ml-4 mt-4">
+            <div className="mt-4 container">
                 <Outlet context={{ runningProcess, runModule }} />
             </div>
         </div>
