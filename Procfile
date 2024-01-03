@@ -6,5 +6,5 @@
 # For more information, see: https://honcho.readthedocs.io/en/latest/index.html#what-are-procfiles
 
 proxy: caddy run
-server: cd demo && trailhead
+server: cd demo && trailhead --reload
 client: cd client && npm run dev

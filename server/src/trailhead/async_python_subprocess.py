@@ -115,6 +115,7 @@ class AsyncPythonSubprocess:
                             },
                         ).model_dump_json()
                     )
+                    await asyncio.sleep(0)
             except asyncio.CancelledError:
                 break
             except Exception as e:
