@@ -37,7 +37,6 @@ def main() -> None:
 
 
 def analyze_module(file: str) -> Module:
-    print(f"analyzing file: {file}")
     with open(file) as f:
         tree = ast.parse(f.read())
         return get_module(file, tree)
@@ -78,7 +77,7 @@ def get_module_function_definitions(tree: ast.AST) -> list[Function]:
             )
 
         def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
-            return self.visit_FunctionDef(node)
+            return self.visit_FunctionDef(node)  # type: ignore
 
         def _get_param_type(self, node: ast.expr | None) -> str:
             if node is None:
