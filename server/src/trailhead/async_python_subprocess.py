@@ -14,6 +14,7 @@ class AsyncPythonSubprocess:
     def __init__(self, module: str, client: WebSocket):
         self._module = module
         self._client = client
+        print("Awaiting receive")
         self._process = None
 
     async def start(self):
@@ -151,7 +152,6 @@ class AsyncPythonSubprocess:
                 self._process.kill()
 
             if self.subprocess_exited():
-                # Let the pipes clear...
                 await asyncio.gather(
                     self._stdout_pipe_task,
                     self._stderr_pipe_task,

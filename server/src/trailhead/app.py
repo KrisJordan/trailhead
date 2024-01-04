@@ -1,18 +1,23 @@
 """Main module for the introductory programming web server."""
 
 __author__ = "Kris Jordan <kris@cs.unc.edu>"
-__copyright__ = "Copyright 2023"
+__copyright__ = "Copyright 2024"
 __license__ = "MIT"
 
 import os
+import sys
+import asyncio
 from fastapi import FastAPI, WebSocket
 from fastapi.concurrency import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.websockets import WebSocketState
 
 from .web_socket_manager import WebSocketManager
 from .file_observer import FileObserver
 from .controller import web_socket_controller
+from .web_socket_event import WebSocketEvent
+from .async_python_subprocess import AsyncPythonSubprocess
 
 web_socket_manager = WebSocketManager(web_socket_controller)
 """Web Socket Manager handles connections and dispatches to the controller."""
@@ -37,6 +42,40 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 """The FastAPI web server instance."""
+
+
+@app.websocket("/ws/{module}/run")
+async def run_module(module: str, client: WebSocket):
+    """The FastAPI web socket endpoint dispatches out to Web Socket Manager."""
+    await client.accept()
+    try:
+        # Begin the async_python_subprocess
+        subprocess = AsyncPythonSubprocess(module, client)
+        pid = await subprocess.start()
+        response = WebSocketEvent(type="RUNNING", data={"pid": pid})
+        await client.send_text(response.model_dump_json())
+        while not subprocess.subprocess_exited():
+            try:
+                data = await asyncio.wait_for(client.receive_text(), timeout=0.1)
+                event = WebSocketEvent.model_validate_json(data)
+                match event.type:
+                    case "KILL":
+                        subprocess.kill()
+                    case "STDIN":
+                        subprocess.write(event.data["data"])
+
+            except asyncio.TimeoutError:
+                # Expected while waiting for client input
+                pass
+        await subprocess.await_end()
+    except Exception as e:
+        print(e, sys.stderr)
+    finally:
+        if not subprocess.subprocess_exited():
+            subprocess.kill()
+
+        if client.client_state == WebSocketState.CONNECTED:
+            await client.close()
 
 
 @app.websocket("/ws")
