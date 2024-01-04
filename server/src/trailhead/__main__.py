@@ -24,6 +24,7 @@ def main() -> int:
             )
         else:
             print("Starting Trailhead server at http://localhost:1110")
+            print("Press Ctrl+C to Stop the Trailhead Server")
             uvicorn.run(app, host="0.0.0.0", port=1110, log_level="error")
         return 0
     except Exception:
