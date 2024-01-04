@@ -8,6 +8,7 @@ import os
 from fastapi import FastAPI, WebSocket
 from fastapi.concurrency import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from .web_socket_manager import WebSocketManager
 from .file_observer import FileObserver
@@ -15,6 +16,9 @@ from .controller import web_socket_controller
 
 web_socket_manager = WebSocketManager(web_socket_controller)
 """Web Socket Manager handles connections and dispatches to the controller."""
+
+# Get the path of this file
+__path__ = os.path.dirname(__file__)
 
 
 @asynccontextmanager
@@ -41,8 +45,10 @@ async def websocket_endpoint(client: WebSocket):
     await web_socket_manager.accept(client)
 
 
-# Get the path of this file
-__path__ = os.path.dirname(__file__)
-
-app.mount("/", StaticFiles(directory=f"{__path__}/static", html=True))
+app.mount("/assets", StaticFiles(directory=f"{__path__}/static/assets", html=True))
 """Static files are served from the static HTML directory."""
+
+
+@app.get("/{full_path:path}")
+async def read_index(full_path: str):
+    return FileResponse(f"{__path__}/static/index.html")
