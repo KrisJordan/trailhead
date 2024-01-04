@@ -54,7 +54,7 @@ function App() {
             <button onClick={() => { setShowFiles(prev => !prev) }}>
                 <Icon className="mx-3" icon={showFiles ? "ph:x" : "ci:hamburger-md"} height={25} />
             </button>
-            <div className="text-xl flex-1 ml-2">{runningProcess ? runningProcess.module : 'Select a Module'}</div>
+            <div className="text-xl flex-1 ml-2 text-white font-black">{runningProcess ? runningProcess.module : 'Select a Module'}</div>
         </div>
         <div className="flex">
             <div className={`flex-none ${!showFiles && 'hidden'}`}>
