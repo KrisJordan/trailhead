@@ -5,100 +5,107 @@ import { parseJsonMessage } from "./Message";
 import { StdErrMessage } from "./StdErrMessage";
 import { StdOutGroupContainer } from "./StdOutGroupContainer";
 import { StdIn, StdOutGroup, StdIO } from "./StdIOTypes";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "./app/store";
+import { clearStdIO, updateStdIn } from "./features/process";
 
 interface PyProcessUIProps {
     pyProcess: PyProcess
 }
 
 export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
-    const { lastMessage, sendJsonMessage } = useWebSocket();
-    const [pyProcess, setPyProcess] = useState(props.pyProcess);
-    const [stdio, setStdIO] = useState<StdIO[]>([]);
+    // const { lastMessage, sendJsonMessage } = useWebSocket();
+    const pyProcess = useSelector<RootState, PyProcess | null>((state) => state.process.active);
+    const stdio = useSelector<RootState, StdIO[]>((state) => state.process.stdio);
     const [stdinValue, setStdinValue] = useState<string>("");
+    const dispatch = useDispatch();
 
     const runAgain = () => {
-        sendJsonMessage({ type: "RUN", data: { module: props.pyProcess.module, request_id: props.pyProcess.requestId } });
-        setStdIO([]);
+        dispatch({
+            type: 'socket/send',
+            payload: { type: "RUN", data: { module: props.pyProcess.module } }
+        })
+        dispatch(clearStdIO());
     };
 
-    useEffect(() => {
-        let message = parseJsonMessage(lastMessage);
-        if (message) {
-            switch (message.type) {
-                case 'RUNNING':
-                    if (message.data.request_id === pyProcess.requestId) {
-                        setPyProcess(prev => {
-                            prev.pid = message?.data.pid;
-                            prev.state = PyProcessState.RUNNING;
-                            return prev;
-                        });
-                    }
-                    break;
-                case 'STDOUT':
-                    if (!message.data.is_input_prompt) {
-                        setStdIO((prev) => {
-                            let time = Date.now();
-                            let prevLine = prev[prev.length - 1];
+    // useEffect(() => {
+    //     let message = parseJsonMessage(lastMessage);
+    //     if (message) {
+    //         switch (message.type) {
+    //             case 'RUNNING':
+    //                 if (message.data.request_id === pyProcess.requestId) {
+    //                     setPyProcess(prev => {
+    //                         prev.pid = message?.data.pid;
+    //                         prev.state = PyProcessState.RUNNING;
+    //                         return prev;
+    //                     });
+    //                 }
+    //                 break;
+    //             case 'STDOUT':
+    //                 if (!message.data.is_input_prompt) {
+    //                     setStdIO((prev) => {
+    //                         let time = Date.now();
+    //                         let prevLine = prev[prev.length - 1];
 
-                            if (prevLine?.type === 'stdout_group') {
-                                let updatedGroup: StdOutGroup = {
-                                    type: 'stdout_group',
-                                    children: [...prevLine.children, { type: 'stdout', line: message?.data.data }],
-                                    startTime: prevLine.startTime,
-                                    endTime: time
-                                }
-                                return [...(prev.slice(0, -1)), updatedGroup];
-                            }
+    //                         if (prevLine?.type === 'stdout_group') {
+    //                             let updatedGroup: StdOutGroup = {
+    //                                 type: 'stdout_group',
+    //                                 children: [...prevLine.children, { type: 'stdout', line: message?.data.data }],
+    //                                 startTime: prevLine.startTime,
+    //                                 endTime: time
+    //                             }
+    //                             return [...(prev.slice(0, -1)), updatedGroup];
+    //                         }
 
-                            return prev.concat({ type: 'stdout_group', children: [{ type: 'stdout', line: message?.data.data }], endTime: time, startTime: time });
-                        });
-                    } else {
-                        setStdIO((prev) => prev.concat({ type: 'stdin', prompt: message?.data.data }))
-                    }
-                    break;
-                case 'STDERR':
-                    if (!message.data.is_input_prompt) {
-                        setStdIO((prev) => prev.concat({ type: 'stderr', line: message?.data.data }))
-                    }
-                    break;
-                case 'INSPECT':
-                    console.log(message);
-                    break;
-                case 'file_modified':
-                    let module = message.data.path.replace(/^\.\//, '').replace(/\//g, '.').replace('.py', '');
-                    console.log(module, props.pyProcess);
-                    if (module === props.pyProcess.module) {
-                        if (pyProcess.state !== PyProcessState.EXITED && pyProcess.pid) {
-                            sendJsonMessage({ type: "KILL", data: { pid: pyProcess.pid } })
-                        }
-                        runAgain()
-                    }
-                    break;
-                case 'EXIT':
-                    if (message.data.pid === pyProcess.pid) {
-                        setPyProcess(prev => {
-                            prev.state = PyProcessState.EXITED;
-                            return prev;
-                        });
-                        sendJsonMessage({ type: "INSPECT", data: { path: props.pyProcess.path } });
-                    }
-                    break;
-            }
-        }
-    }, [lastMessage, pyProcess]);
+    //                         return prev.concat({ type: 'stdout_group', children: [{ type: 'stdout', line: message?.data.data }], endTime: time, startTime: time });
+    //                     });
+    //                 } else {
+    //                     setStdIO((prev) => prev.concat({ type: 'stdin', prompt: message?.data.data }))
+    //                 }
+    //                 break;
+    //             case 'STDERR':
+    //                 if (!message.data.is_input_prompt) {
+    //                     setStdIO((prev) => prev.concat({ type: 'stderr', line: message?.data.data }))
+    //                 }
+    //                 break;
+    //             case 'INSPECT':
+    //                 console.log(message);
+    //                 break;
+    //             case 'file_modified':
+    //                 let module = message.data.path.replace(/^\.\//, '').replace(/\//g, '.').replace('.py', '');
+    //                 console.log(module, props.pyProcess);
+    //                 if (module === props.pyProcess.module) {
+    //                     if (pyProcess.state !== PyProcessState.EXITED && pyProcess.pid) {
+    //                         sendJsonMessage({ type: "KILL", data: { pid: pyProcess.pid } })
+    //                     }
+    //                     runAgain()
+    //                 }
+    //                 break;
+    //             case 'EXIT':
+    //                 if (message.data.pid === pyProcess.pid) {
+    //                     setPyProcess(prev => {
+    //                         prev.state = PyProcessState.EXITED;
+    //                         return prev;
+    //                     });
+    //                     sendJsonMessage({ type: "INSPECT", data: { path: props.pyProcess.path } });
+    //                 }
+    //                 break;
+    //         }
+    //     }
+    // }, [lastMessage, pyProcess]);
 
-    useEffect(() => {
-        // This is clean-up only...
-        return () => {
-            if (pyProcess.state !== PyProcessState.EXITED && pyProcess.pid) {
-                sendJsonMessage({ type: "KILL", data: { pid: pyProcess.pid } })
-            }
-        };
-    }, [pyProcess])
+    // useEffect(() => {
+    //     // This is clean-up only...
+    //     return () => {
+    //         if (pyProcess.state !== PyProcessState.EXITED && pyProcess.pid) {
+    //             sendJsonMessage({ type: "KILL", data: { pid: pyProcess.pid } })
+    //         }
+    //     };
+    // }, [pyProcess])
 
-    let status: string;
+    let status: string = "";
     let statusBadgeClass: string = "badge ";
-    switch (pyProcess.state) {
+    switch (pyProcess?.state) {
         case PyProcessState.STARTING:
             status = 'Starting...';
             statusBadgeClass += 'badge-secondary';
@@ -118,25 +125,34 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
     };
 
     const handleStdInSend = useCallback((lineIndex: number, stdinLine: StdIn) => {
-        let message = { "type": "STDIN", "data": { "data": stdinValue, "pid": pyProcess.pid } };
-        sendJsonMessage(message);
-        setStdIO((prev) => {
-            let line = stdio[lineIndex];
-            if (line === stdinLine) {
-                let copy = [...prev];
-                let spliced = copy.splice(lineIndex, 1)[0];
-                if (spliced.type === 'stdin') {
-                    spliced.response = stdinValue;
-                    setStdinValue('');
-                    let rv = copy.concat(spliced);
-                    return rv;
-                } else {
-                    throw new Error("Expected stdin... found: " + spliced.type);
-                }
-            } else {
-                throw new Error("Expected line === stdinLine");
-            }
+        dispatch(
+            updateStdIn({
+                lineIndex: lineIndex,
+                stdinValue: stdinValue
+            })
+        );
+        dispatch({
+            type: 'socket/send',
+            payload: { type: "STDIN", "data": { "data": stdinValue, "pid": pyProcess?.pid } }
         });
+        setStdinValue('');
+        // setStdIO((prev) => {
+        //     let line = stdio[lineIndex];
+        //     if (line === stdinLine) {
+        //         let copy = [...prev];
+        //         let spliced = copy.splice(lineIndex, 1)[0];
+        //         if (spliced.type === 'stdin') {
+        //             spliced.response = stdinValue;
+        //             setStdinValue('');
+        //             let rv = copy.concat(spliced);
+        //             return rv;
+        //         } else {
+        //             throw new Error("Expected stdin... found: " + spliced.type);
+        //         }
+        //     } else {
+        //         throw new Error("Expected line === stdinLine");
+        //     }
+        // });
     }, [stdinValue]);
 
     let runAgainButton: React.ReactElement | undefined;

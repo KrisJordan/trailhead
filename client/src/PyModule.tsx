@@ -1,12 +1,30 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useLoaderData, useOutletContext, useLocation } from "react-router-dom";
-import { PyProcess } from "./PyProcess";
+import { PyProcess, PyProcessState } from "./PyProcess";
 import { PyProcessUI } from "./PyProcessUI";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "./app/store";
+import { setProcess } from "./features/process";
 
 export function PyModule() {
-    const { runningProcess, runModule } = useOutletContext<{ runningProcess: PyProcess | null, runModule(name: string): void }>();
+    const runningProcess = useSelector<RootState, PyProcess | null>(state => state.process.active);
     const moduleName = useLoaderData();
     const location = useLocation();
+    const dispatch = useDispatch();
+
+    const runModule = (moduleStr: string) => {
+        dispatch(
+            setProcess({
+                path: moduleStr + ".py",
+                module: moduleStr,
+                state: PyProcessState.STARTING
+            })
+        );
+        dispatch({
+            type: 'socket/send',
+            payload: { type: "RUN", "data": { "module": moduleStr } }
+        });
+    };
 
     let isRunning = false;
 

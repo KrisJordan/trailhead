@@ -8,21 +8,34 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 
 import './App.css';
+import { useDispatch, useSelector } from 'react-redux';
+import { parseModuleFromFile } from './utils/ModuleTools';
+import { ProcessState, clearProcess, setProcess } from './features/process';
+import { RootState } from './app/store';
 
 function App() {
     const [messageHistory, setMessageHistory] = useState<string[]>([]);
-    const [runningProcess, setRunningProcess] = useState<PyProcess | null>(null);
+    // const [runningProcess, setRunningProcess] = useState<PyProcess | null>(null);
+    const runningProcess = useSelector<RootState, PyProcess | null>(state => state.process.active);
     const [requestId, setRequestId] = useState<number>(0);
     const [showFiles, setShowFiles] = useState<boolean>(true);
-    const { sendJsonMessage, lastJsonMessage } = useWebSocket();
+    const dispatch = useDispatch();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (lastJsonMessage && Object.keys(lastJsonMessage).length !== 0) {
-            let message = lastJsonMessage as Message;
-            setMessageHistory(prev => prev.concat(message.type));
+        dispatch({ type: 'socket/connect' });
+
+        return () => {
+            dispatch({ type: 'socket/disconnect' });
         }
-    }, [lastJsonMessage, setMessageHistory]);
+    }, []);
+
+    // useEffect(() => {
+    //     if (lastJsonMessage && Object.keys(lastJsonMessage).length !== 0) {
+    //         let message = lastJsonMessage as Message;
+    //         setMessageHistory(prev => prev.concat(message.type));
+    //     }
+    // }, [lastJsonMessage, setMessageHistory]);
 
     // const connectionStatus = {
     //     [ReadyState.CONNECTING]: 'Connecting',
@@ -32,20 +45,9 @@ function App() {
     //     [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
     // }[readyState];
 
-    const runModule = useCallback((moduleStr: string) => {
-        sendJsonMessage({ "type": "RUN", "data": { "module": moduleStr, "request_id": requestId } });
-        setRequestId(prev => prev + 1);
-        setRunningProcess({
-            path: moduleStr + ".py",
-            module: moduleStr,
-            requestId: requestId,
-            state: PyProcessState.STARTING
-        });
-    }, [requestId]);
-
     function routeToModuleRunner(module: Module) {
-        let moduleStr = module.full_path.replace(/^\.\//, '').replace(/\//g, '.').replace('.py', '');
-        setRunningProcess(null);
+        let moduleStr = parseModuleFromFile(module.full_path);
+        dispatch(clearProcess());
         navigate(`/module/${moduleStr}/run`);
     }
 
@@ -61,14 +63,14 @@ function App() {
                 <NamespaceTree selectModule={routeToModuleRunner} />
             </div>
             <div className="mt-4 container">
-                <Outlet context={{ runningProcess, runModule }} />
+                <Outlet />
             </div>
         </div>
-        <ul className="hidden">
+        {/* <ul className="hidden">
             {messageHistory.map((message, idx) => (
                 <li key={idx}>{message}</li>
             ))}
-        </ul>
+        </ul> */}
     </>;
 }
 

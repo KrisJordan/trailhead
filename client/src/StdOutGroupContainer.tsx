@@ -15,7 +15,7 @@ export function StdOutGroupContainer(props: PropsWithChildren<StdOutProps>) {
     const convertedRatePerMS = props.groupAfterRatePerSecond / 1000;
     const shouldCollapse =
         lines.length >= props.minGroupSize
-        && (lines.length / (stdoutGroup.endTime - stdoutGroup.startTime)) > convertedRatePerMS;
+        && (lines.length / (stdoutGroup.endTime - stdoutGroup.startTime + 1)) > convertedRatePerMS;
 
     function stdOutLine(childLine: StdOut, idx: number) {
         return <p key={idx}>{childLine.line}</p>

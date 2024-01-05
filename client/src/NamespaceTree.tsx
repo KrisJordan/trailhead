@@ -1,6 +1,10 @@
 import { useState, useEffect, PropsWithChildren } from 'react';
 import useWebSocket, { ReadyState } from './useWebSocket';
 import { parseJsonMessage } from './Message';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from './app/store';
+import { SocketState } from './features/socket';
+import { FilesState } from './features/files';
 
 export interface Tree {
     ns_type: 'tree'
@@ -25,26 +29,32 @@ interface NamespaceTreeProps {
 }
 
 function NamespaceTree(props: PropsWithChildren<NamespaceTreeProps>) {
-    const { lastMessage, readyState, sendJsonMessage } = useWebSocket();
-    const [files, setFiles] = useState<Tree>({ ns_type: 'tree', children: [] });
+    const { lastMessage, sendJsonMessage } = useWebSocket();
+    // const [files, setFiles] = useState<Tree>({ ns_type: 'tree', children: [] });
+    const files = useSelector<RootState, FilesState>((state) => state.files);
+    const { readyState } = useSelector<RootState, SocketState>((state) => state.socket);
+    const dispatch = useDispatch();
 
     useEffect(() => {
         let message = parseJsonMessage(lastMessage);
         if (message) {
             switch (message.type) {
                 case 'LS':
-                    setFiles(message.data.files);
+                    // setFiles(message.data.files);
                     break;
                 case 'directory_modified':
                     sendJsonMessage({ type: "LS", data: { path: "/" } });
                     break;
             }
         }
-    }, [lastMessage, setFiles]);
+    }, [lastMessage]);
 
     useEffect(() => {
         if (readyState === ReadyState.OPEN) {
-            sendJsonMessage({ type: "LS", data: { path: "/" } });
+            dispatch({
+                type: 'socket/send',
+                payload: { type: "LS", data: { path: "/" } }
+            });
         }
     }, [readyState]);
 
@@ -64,7 +74,7 @@ function NamespaceTree(props: PropsWithChildren<NamespaceTreeProps>) {
     };
 
     return <div className="menu menu-s rounded-lg max-w-xs flex-none w-25">
-        {buildTree(files)}
+        {buildTree(files.collection)}
     </div>;
 }
 
