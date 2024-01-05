@@ -8,7 +8,7 @@ More on multi-architecture images: <https://www.docker.com/blog/multi-arch-build
 Command to build and push multi-arch image, replace `TAG` with the version:
 
 ~~~bash
-export TAG=0.0.5
+export TAG=0.0.22
 docker buildx build \
     --push \
     --platform linux/arm64,linux/amd64 \

@@ -1,5 +1,5 @@
 ARG ARCH=
-FROM ${ARCH}ubuntu:22.04
+FROM ${ARCH}ubuntu:22.04 as packages
 
 # Setup workspace directory
 RUN mkdir /workspace
@@ -18,7 +18,8 @@ RUN apt-get update \
         debian-archive-keyring \
         git \
         gnupg \
-        # libatomic1 \
+        libcairo2 \
+        libpq-dev \
         locales \
         software-properties-common \
         sudo \
@@ -29,26 +30,14 @@ RUN apt-get update \
         zsh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 20 from https://github.com/nodesource
-ENV NODE_MAJOR 20 
-RUN mkdir -p /etc/apt/keyrings \ 
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update \
-    && apt-get install nodejs -y \
-    && npm install -g npm@latest \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install Python 3.12
 RUN add-apt-repository ppa:deadsnakes/ppa \
     && apt update \
     && apt install --yes \
         python3.12 \
-        libpq-dev \
         python3.12-dev \
         python3.12-distutils \
         python3-pip \
-        libcairo2 \
     && rm -rf /var/lib/apt/lists* \
     && unlink /usr/bin/python3 \
     && ln -s /usr/bin/python3.12 /usr/bin/python3
@@ -57,6 +46,52 @@ RUN add-apt-repository ppa:deadsnakes/ppa \
 RUN wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
     python3 /tmp/get-pip.py && \
     rm /tmp/get-pip.py
+
+# Use a non-root user per https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+# Add non-root user and add to sudoers
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+
+# Configure zsh
+USER $USERNAME
+ENV HOME /home/$USERNAME
+
+# Install Python requirements.txt
+COPY server/requirements.txt /workspace/requirements.txt
+WORKDIR /workspace
+RUN echo 'export PYTHONPATH=/workspace' >>~/.zshrc && \
+    python3 -m pip install --user -r requirements.txt && \
+    python3 -m pip cache purge
+
+
+# === Stage 2 ===
+# Restart with more minimal setup
+FROM ${ARCH}python:3.12-slim-bookworm as target
+
+# Setup workspace directory
+RUN mkdir /workspace
+WORKDIR /workspace
+
+# Install dependencies
+ENV TZ=America/New_York
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install --yes \
+        curl \
+        git \
+        locales \
+        sudo \
+        tzdata \
+        unzip \
+        wget \
+        zip \
+        zsh \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # Use a non-root user per https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
 ARG USERNAME=vscode
@@ -77,6 +112,9 @@ RUN git config --system safe.directory '/workspace'
 # Set Locale for Functional Autocompletion in zsh
 RUN locale-gen en_US.UTF-8
 
+# Link from deadsnakes install of python3 to python3.12:slim-bookworm
+RUN ln -s /usr/local/bin/python3 /usr/bin/python3
+
 # Configure zsh
 USER $USERNAME
 ENV HOME /home/$USERNAME
@@ -86,11 +124,13 @@ RUN curl https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.
     && sed -i 's/robbyrussell/kennethreitz/g' ~/.zshrc \
     && echo 'export PATH=$PATH:$HOME/.local/bin' >>~/.zshrc
 
-# Install Python requirements.txt
-COPY server/requirements.txt /workspace/requirements.txt
-WORKDIR /workspace
-RUN echo 'export PYTHONPATH=/workspace' >>~/.zshrc && \
-    python3 -m pip install -r requirements.txt
+# Copy in built Python Packages
+COPY --from=packages /home/${USERNAME}/.local /home/${USERNAME}/.local
+COPY server/requirements.txt /tmp/requirements.txt
+WORKDIR /tmp
+RUN python3 -m pip install --user -r requirements.txt && \
+    pip install --upgrade pip && \
+    python3 -m pip cache purge
 
 # Install Trailhead (until an official PyPI package)
 COPY bin/trailhead /home/$USERNAME/.local/bin/trailhead

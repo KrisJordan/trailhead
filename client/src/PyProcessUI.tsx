@@ -5,7 +5,7 @@ import { StdOutGroupContainer } from "./StdOutGroupContainer";
 import { StdIO } from "./StdIOTypes";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./app/store";
-import { clearStdIO, updateStdIn } from "./features/process";
+import { updateStdIn } from "./features/process";
 
 
 export function PyProcessUI() {
@@ -14,13 +14,13 @@ export function PyProcessUI() {
     const [stdinValue, setStdinValue] = useState<string>("");
     const dispatch = useDispatch();
 
-    const runAgain = () => {
-        dispatch({
-            type: 'socket/send',
-            payload: { type: "RUN", data: { module: pyProcess?.module } }
-        })
-        dispatch(clearStdIO());
-    };
+    // const runAgain = () => {
+    //     dispatch({
+    //         type: 'socket/send',
+    //         payload: { type: "RUN", data: { module: pyProcess?.module } }
+    //     })
+    //     dispatch(clearStdIO());
+    // };
 
     let status: string = "";
     let statusBadgeClass: string = "mb-4 badge ";
