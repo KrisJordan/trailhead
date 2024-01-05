@@ -2,6 +2,17 @@ import { ModuleInfo, clearModule, setModule } from "../features/module";
 import store from "../app/store";
 import router from "../routes";
 
+export const runLoader = async ({ params }: any) => {
+    console.log('runLoader');
+    store.dispatch({
+        type: "runsocket/connect",
+        payload: {
+            endpoint: `/ws/${params.moduleName}/run`
+        }
+    });
+    return null;
+};
+
 export const moduleLoader = async ({ params, request }: any) => {
     if (params.moduleName) {
         // TODO: Error handling...

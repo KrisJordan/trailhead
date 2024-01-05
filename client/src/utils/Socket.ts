@@ -3,7 +3,7 @@ import { Message } from "../Message";
 class Socket {
     socket: WebSocket | null = null
 
-    constructor() { }
+    constructor(private path: string = "/ws") { }
 
     connect() {
         if (this.socket) {
@@ -12,7 +12,7 @@ class Socket {
 
         const HOST = window.location.host;
         const PROTOCOL = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
-        const WS_ENDPOINT = `${PROTOCOL}//${HOST}/ws`;
+        const WS_ENDPOINT = `${PROTOCOL}//${HOST}${this.path}`;
         this.socket = new WebSocket(WS_ENDPOINT);
     }
 

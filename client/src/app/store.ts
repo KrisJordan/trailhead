@@ -5,6 +5,7 @@ import socketReducer from '../features/socket';
 import moduleReducer from '../features/module';
 import { websocketMiddlewareFactory } from '../middleware/websocket';
 import { Socket } from '../utils/Socket';
+import { runsocketMiddlewareFactory } from '../middleware/runsocket';
 
 const store = configureStore({
     reducer: {
@@ -13,7 +14,8 @@ const store = configureStore({
         socket: socketReducer,
         module: moduleReducer,
     },
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(websocketMiddlewareFactory(new Socket()))
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware()
+        .concat([websocketMiddlewareFactory(new Socket()), runsocketMiddlewareFactory()])
 });
 
 export type RootState = ReturnType<typeof store.getState>;

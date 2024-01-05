@@ -4,7 +4,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { PyModule } from "./PyModule";
 import { ModuleContext } from "./ModuleContext";
 import { ModuleRunner } from "./ModuleRunner";
-import { moduleLoader } from "./api/module";
+import { moduleLoader, runLoader } from "./api/module";
 import { ModuleREPL } from "./ModuleREPL";
 import { ModuleIndex } from "./ModuleIndex";
 import { Home } from "./home/Home";
@@ -63,6 +63,7 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "run",
+                        loader: runLoader,
                         element: <ModuleRunner />,
                     },
                     {
