@@ -8,8 +8,9 @@ export function ModuleREPL() {
         <div className="collapse bg-base-200 mb-2 p-0" key={idx}>
             <input type="checkbox" />
             <div key={fn.name} className="collapse-title">
-                <code className="mb-0">{fn.name}({fn.parameters.map((p: ParameterInfo) => `${p.name}: ${p.type}`).join(", ")}) -&gt; {fn.return_type}</code>
-                <p className="italic ml-2 mt-0 mb-0 p-0">{fn.doc}</p>
+                <code className="mb-0"><span className="font-bold">{fn.name}</span>({fn.parameters.map((p: ParameterInfo, i: number) => <>{i > 0 ? ', ' : ''}{p.name}: <span className="font-bold">{p.type}</span></>)}) -&gt; <span className="font-bold">{fn.return_type}</span></code>
+
+                <p className="italic ml-2 mt-0 mb-0 p-0 text-sm">{fn.doc}</p>
             </div>
             <div className="collapse-content">
                 <pre className="bg-primary p-4 rounded-lg"><code>{fn.source}</code></pre>
