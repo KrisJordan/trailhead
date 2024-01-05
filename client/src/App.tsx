@@ -10,7 +10,7 @@ import { Icon } from '@iconify/react';
 import './App.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { parseModuleFromFile } from './utils/ModuleTools';
-import { ProcessState, clearProcess, setProcess } from './features/process';
+import { ProcessState, clearProcess, clearStdIO, setProcess } from './features/process';
 import { RootState } from './app/store';
 
 function App() {
@@ -47,7 +47,7 @@ function App() {
 
     function routeToModuleRunner(module: Module) {
         let moduleStr = parseModuleFromFile(module.full_path);
-        dispatch(clearProcess());
+        dispatch(clearStdIO());
         navigate(`/module/${moduleStr}/run`);
     }
 
