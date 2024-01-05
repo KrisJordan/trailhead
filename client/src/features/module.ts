@@ -1,6 +1,6 @@
 import { PayloadAction, createSlice } from '@reduxjs/toolkit';
 
-interface ModuleInfo {
+export interface ModuleInfo {
     name: string;
     doc: string;
     top_level_functions: any[];

@@ -1,4 +1,4 @@
-"""Some simple function definitions without calls."""
+"""Some simple function definitions without calls!"""
 
 
 def hello() -> None:
