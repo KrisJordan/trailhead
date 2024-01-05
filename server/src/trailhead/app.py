@@ -18,6 +18,7 @@ from .file_observer import FileObserver
 from .controller import web_socket_controller
 from .web_socket_event import WebSocketEvent
 from .async_python_subprocess import AsyncPythonSubprocess
+from .analysis.inspect import analyze_module, Module
 
 web_socket_manager = WebSocketManager(web_socket_controller)
 """Web Socket Manager handles connections and dispatches to the controller."""
@@ -42,6 +43,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 """The FastAPI web server instance."""
+
+
+@app.get("/api/module/{module}")
+async def get_module(module: str) -> Module:
+    print("get module", module)
+    return analyze_module(f"{module}.py")
 
 
 @app.websocket("/ws/{module}/run")
