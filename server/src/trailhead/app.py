@@ -47,7 +47,6 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/api/module/{module}")
 async def get_module(module: str) -> Module:
-    print("get module", module)
     return analyze_module(f"{module}.py")
 
 

@@ -1,17 +1,17 @@
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { SocketState } from "../features/socket";
 import { RootState } from "../app/store";
+import { ModuleState } from "../features/module";
 
 export interface HomeContext {
     navigateToModule: (module: string) => void;
 }
 
 export function Home() {
-    const params = useParams();
-    const module = params.moduleName || null;
+    const module = useSelector<RootState, ModuleState>((state) => state.module);
     const dispatch = useDispatch();
     const { readyState } = useSelector<RootState, SocketState>((state) => state.socket);
 
@@ -32,8 +32,23 @@ export function Home() {
     };
 
     let moduleJsx = null;
-    if (module) {
-        moduleJsx = <li>{module}</li>;
+    if (module.selected) {
+        moduleJsx = <li>{module.selected}</li>;
+    }
+
+    let navline = null;
+    if (module.info) {
+        if (module.info.doc !== "") {
+            navline = <>
+                <div className="divider lg:divider-horizontal divider-secondary" />
+                <div className="m-0 p-0 invisible lg:visible">{module.info.doc}</div>
+            </>
+        }
+    } else {
+        navline = <>
+            <div className="divider lg:divider-horizontal divider-secondary" />
+            <div className="m-0 p-0 invisible lg:visible">The Adventure Starts Here</div>
+        </>
     }
 
     let indicator = null;
@@ -60,11 +75,10 @@ export function Home() {
         <div className="navbar bg-neutral text-neutral-content rounded-box mb-2">
             <div className="breadcrumbs flex-1 ">
                 <ul className="text-xl text-white font-black">
-                    <li><NavLink to="/new" aria-disabled="true"><Icon icon="mdi:forest-outline" className="mx-2" /> Trailhead</NavLink></li>
+                    <li><NavLink to="/new" replace={true} aria-disabled="true"><Icon icon="mdi:forest-outline" className="mx-2" /> Trailhead</NavLink></li>
                     {moduleJsx}
                 </ul>
-                <div className="divider lg:divider-horizontal divider-secondary" />
-                <div className="m-0 p-0 invisible lg:visible">The Adventure Starts Here</div>
+                {navline}
             </div>
             <div className="flex-none">{indicator}</div>
         </div>

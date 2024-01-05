@@ -46,11 +46,11 @@ const router = createBrowserRouter([
     {
         path: "/new",
         element: <Home />,
-        loader: moduleLoader,
         children: [
             {
                 index: true,
-                element: <HomeIndex />
+                element: <HomeIndex />,
+                loader: moduleLoader,
             },
             {
                 path: "module/:moduleName",
