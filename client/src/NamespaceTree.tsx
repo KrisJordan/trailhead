@@ -1,10 +1,11 @@
-import { useState, useEffect, PropsWithChildren } from 'react';
+import { useEffect, PropsWithChildren } from 'react';
 import useWebSocket, { ReadyState } from './useWebSocket';
 import { parseJsonMessage } from './Message';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from './app/store';
 import { SocketState } from './features/socket';
 import { FilesState } from './features/files';
+import { NavLink } from 'react-router-dom';
 
 export interface Tree {
     ns_type: 'tree'
@@ -24,13 +25,8 @@ export interface Module {
     full_path: string
 }
 
-interface NamespaceTreeProps {
-    selectModule: (module: Module) => void;
-}
-
-function NamespaceTree(props: PropsWithChildren<NamespaceTreeProps>) {
+function NamespaceTree() {
     const { lastMessage, sendJsonMessage } = useWebSocket();
-    // const [files, setFiles] = useState<Tree>({ ns_type: 'tree', children: [] });
     const files = useSelector<RootState, FilesState>((state) => state.files);
     const { readyState } = useSelector<RootState, SocketState>((state) => state.socket);
     const dispatch = useDispatch();
@@ -63,7 +59,12 @@ function NamespaceTree(props: PropsWithChildren<NamespaceTreeProps>) {
         for (let item of tree.children) {
             switch (item.ns_type) {
                 case 'module':
-                    children.push(<li key={item.full_path + item.name} onClick={() => props.selectModule(item as Module)}><a>{item.name}</a></li>);
+                    children.push(<li key={item.full_path + item.name}>
+                        <NavLink to={"./module/" + item.full_path.substring(2).replace("\/", ".").replace(".py", "")} className="w-full grid grid-cols-4 hover:bg-neutral-100">
+                            <span className="col-span-1">{item.name.replace(".py", "")}</span>
+                            <span className="text-neutral-400 font-light italic col-span-3">TODO: docstring...</span>
+                        </NavLink>
+                    </li>);
                     break;
                 case 'package':
                     children.push(<li key={item.full_path + item.name}><details><summary><a>{item.name}</a></summary>{buildTree(item)}</details></li>)
@@ -73,7 +74,7 @@ function NamespaceTree(props: PropsWithChildren<NamespaceTreeProps>) {
         return <ul>{children}</ul>
     };
 
-    return <div className="menu menu-s rounded-lg max-w-xs flex-none w-25">
+    return <div className="menu menu-lg bg-base-100 rounded-box">
         {buildTree(files.collection)}
     </div>;
 }

@@ -11,11 +11,9 @@ export interface HomeContext {
 
 export function Home() {
     const params = useParams();
-    console.log("params", params);
     const module = params.moduleName || null;
     const dispatch = useDispatch();
     const { readyState } = useSelector<RootState, SocketState>((state) => state.socket);
-    console.log(readyState);
 
     // const [module, setModule] = useState<string | null>(null);
     const navigate = useNavigate();
