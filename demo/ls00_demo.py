@@ -10,8 +10,8 @@ def show_call(x: int, y: int) -> str:
     return rv
 
 
-def make_point(x: int, y: int) -> Point:
-    """TODO: Support list/generic types."""
+def point_factory(x: int, y: int) -> Point:
+    """TODO: Support list/generic types in params and return type."""
     return Point(x, y)
 
 

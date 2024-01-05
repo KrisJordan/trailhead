@@ -22,7 +22,7 @@ export const moduleLoader = async ({ params, request }: any) => {
 
         /* Here we "sniff" the module to see whether it looks like just function definitions and
            redirect to one of the top-level tools if so. */
-        let target = `/new/module/${params.moduleName}`;
+        let target = `/module/${params.moduleName}`;
 
         /* This is a bit of a hack to make sure that we don't get into a redirect loop. */
         /* This also ensures that we don't jump to a different tab than the one a user is on. */

@@ -75,7 +75,7 @@ export function Home() {
         <div className="navbar bg-neutral text-neutral-content rounded-box mb-2">
             <div className="breadcrumbs flex-1 ">
                 <ul className="text-xl text-white font-black">
-                    <li><NavLink to="/new" replace={true} aria-disabled="true"><Icon icon="mdi:forest-outline" className="mx-2" /> Trailhead</NavLink></li>
+                    <li><NavLink to="/" replace={true} aria-disabled="true"><Icon icon="mdi:forest-outline" className="mx-2" /> Trailhead</NavLink></li>
                     {moduleJsx}
                 </ul>
                 {navline}

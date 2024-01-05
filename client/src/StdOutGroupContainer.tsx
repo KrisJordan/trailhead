@@ -18,7 +18,7 @@ export function StdOutGroupContainer(props: PropsWithChildren<StdOutProps>) {
         && (lines.length / (stdoutGroup.endTime - stdoutGroup.startTime + 1)) > convertedRatePerMS;
 
     function stdOutLine(childLine: StdOut, idx: number) {
-        return <p key={idx}>{childLine.line}</p>
+        return <p key={idx} className="mb-4 text-xl">{childLine.line}</p>
     };
 
     return <>
@@ -26,7 +26,7 @@ export function StdOutGroupContainer(props: PropsWithChildren<StdOutProps>) {
             shouldCollapse
                 ? <div>
                     {lines.slice(0, 2).map(stdOutLine)}
-                    <p onClick={() => { setIsOpen(current => !current) }} className="hover:cursor-pointer">
+                    <p onClick={() => { setIsOpen(current => !current) }} className="hover:cursor-pointer text-xl mb-4">
                         {
                             isOpen
                                 ? <>Hide lower <strong>{lines.length - 4}</strong> lines</>

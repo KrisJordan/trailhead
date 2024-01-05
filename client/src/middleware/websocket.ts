@@ -2,14 +2,11 @@ import { Socket } from '../utils/Socket';
 import { parseJsonMessage } from '../Message';
 import { update as setFiles } from '../features/files';
 import { updateReadyState } from '../features/socket';
-import { updateProcessState, appendStdIO, clearStdIO, incrementProcessRequestId } from '../features/process';
-import { PyProcessState } from '../PyProcess';
-import { RootState } from '../app/store';
 import router from "../routes";
 
 // Explained in far more detail here: https://www.taniarascia.com/websockets-in-redux/
 export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (next: any) => (action: any) => {
-    const { dispatch, getState } = params;
+    const { dispatch } = params;
     const { type, payload } = action;
 
     function setReadyState(readyState: number) {
@@ -40,48 +37,10 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
                     case 'directory_modified':
                         socket.send({ type: "LS", data: { path: "/" } });
                         break;
-                    // case 'RUNNING':
-                    //     dispatch(clearStdIO());
-
-                    //     if (message.data.request_id === process.active?.requestId) {
-                    //         dispatch(
-                    //             updateProcessState({ pid: message?.data.pid, state: PyProcessState.RUNNING })
-                    //         );
-                    //     }
-                    //     break;
-                    // case 'STDOUT':
-                    //     if (message.data.is_input_prompt) {
-                    //         dispatch(
-                    //             appendStdIO({
-                    //                 type: 'stdin', prompt: message?.data.data
-                    //             })
-                    //         );
-                    //     } else {
-                    //         dispatch(
-                    //             appendStdIO({
-                    //                 type: 'stdout', line: message?.data.data
-                    //             })
-                    //         );
-                    //     }
-                    //     break;
-                    // case 'STDERR':
-                    //     dispatch(
-                    //         appendStdIO({
-                    //             type: 'stderr', line: message?.data.data
-                    //         })
-                    //     );
-                    //     break;
                     case 'file_modified':
                         router.navigate(".", { replace: true });
                         break;
-                    // case 'EXIT':
-                    //     if (message.data.pid === process.active?.pid) {
-                    //         dispatch(
-                    //             updateProcessState({ state: PyProcessState.EXITED })
-                    //         );
-                    //     }
-                    //     // socket.send({ type: "INSPECT", data: { path: process.active.path } })
-                    //     break;
+
                 }
             });
 
@@ -98,14 +57,7 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
             });
             break;
         case 'socket/send':
-            // if (payload.type === "RUN") {
-            //     dispatch(incrementProcessRequestId());
 
-            //     let { process } = getState() as RootState;
-            //     if (process.active) {
-            //         payload.data.request_id = process.active.requestId;
-            //     }
-            // }
             socket.send(payload);
             break;
         case 'socket/disconnect':
