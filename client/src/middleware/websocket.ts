@@ -7,6 +7,7 @@ import { updateProcessState, appendStdIO, clearStdIO, incrementProcessRequestId 
 import { PyProcessState } from '../PyProcess';
 import { PayloadAction, buildCreateSlice } from '@reduxjs/toolkit';
 import { RootState } from '../app/store';
+import router from "../routes";
 
 // Explained in far more detail here: https://www.taniarascia.com/websockets-in-redux/
 export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (next: any) => (action: any) => {
@@ -76,17 +77,18 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
                         // Do something here
                         break;
                     case 'file_modified':
-                        let module = parseModuleFromFile(message.data.path);
-                        if (module !== process.active?.module) {
-                            return;
-                        }
+                        router.navigate(".", { replace: true });
+                        // let module = parseModuleFromFile(message.data.path);
+                        // if (module !== process.active?.module) {
+                        //     return;
+                        // }
 
-                        if (process.active.state !== PyProcessState.EXITED && process.active.pid) {
-                            socket.send({ type: "KILL", data: { pid: process.active.pid } });
-                        }
+                        // if (process.active.state !== PyProcessState.EXITED && process.active.pid) {
+                        //     socket.send({ type: "KILL", data: { pid: process.active.pid } });
+                        // }
 
-                        socket.send({ type: "RUN", data: { module: process.active.module, request_id: process.active.requestId } })
-                        clearStdIO();
+                        // socket.send({ type: "RUN", data: { module: process.active.module, request_id: process.active.requestId } })
+                        // clearStdIO();
                         break;
                     case 'EXIT':
                         if (message.data.pid === process.active?.pid) {
