@@ -32,7 +32,7 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
                     return;
                 }
 
-                const { process } = getState() as RootState;
+                // const { process } = getState() as RootState;
                 switch (message.type) {
                     case 'LS':
                         dispatch(setFiles(message.data.files));
@@ -40,62 +40,48 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
                     case 'directory_modified':
                         socket.send({ type: "LS", data: { path: "/" } });
                         break;
-                    case 'RUNNING':
-                        dispatch(clearStdIO());
+                    // case 'RUNNING':
+                    //     dispatch(clearStdIO());
 
-                        if (message.data.request_id === process.active?.requestId) {
-                            dispatch(
-                                updateProcessState({ pid: message?.data.pid, state: PyProcessState.RUNNING })
-                            );
-                        }
-                        break;
-                    case 'STDOUT':
-                        if (message.data.is_input_prompt) {
-                            dispatch(
-                                appendStdIO({
-                                    type: 'stdin', prompt: message?.data.data
-                                })
-                            );
-                        } else {
-                            dispatch(
-                                appendStdIO({
-                                    type: 'stdout', line: message?.data.data
-                                })
-                            );
-                        }
-                        break;
-                    case 'STDERR':
-                        dispatch(
-                            appendStdIO({
-                                type: 'stderr', line: message?.data.data
-                            })
-                        );
-                        break;
-                    case 'INSPECT':
-                        // Do something here
-                        break;
+                    //     if (message.data.request_id === process.active?.requestId) {
+                    //         dispatch(
+                    //             updateProcessState({ pid: message?.data.pid, state: PyProcessState.RUNNING })
+                    //         );
+                    //     }
+                    //     break;
+                    // case 'STDOUT':
+                    //     if (message.data.is_input_prompt) {
+                    //         dispatch(
+                    //             appendStdIO({
+                    //                 type: 'stdin', prompt: message?.data.data
+                    //             })
+                    //         );
+                    //     } else {
+                    //         dispatch(
+                    //             appendStdIO({
+                    //                 type: 'stdout', line: message?.data.data
+                    //             })
+                    //         );
+                    //     }
+                    //     break;
+                    // case 'STDERR':
+                    //     dispatch(
+                    //         appendStdIO({
+                    //             type: 'stderr', line: message?.data.data
+                    //         })
+                    //     );
+                    //     break;
                     case 'file_modified':
                         router.navigate(".", { replace: true });
-                        // let module = parseModuleFromFile(message.data.path);
-                        // if (module !== process.active?.module) {
-                        //     return;
-                        // }
-
-                        // if (process.active.state !== PyProcessState.EXITED && process.active.pid) {
-                        //     socket.send({ type: "KILL", data: { pid: process.active.pid } });
-                        // }
-
-                        // socket.send({ type: "RUN", data: { module: process.active.module, request_id: process.active.requestId } })
-                        // clearStdIO();
                         break;
-                    case 'EXIT':
-                        if (message.data.pid === process.active?.pid) {
-                            dispatch(
-                                updateProcessState({ state: PyProcessState.EXITED })
-                            );
-                        }
-                        // socket.send({ type: "INSPECT", data: { path: process.active.path } })
-                        break;
+                    // case 'EXIT':
+                    //     if (message.data.pid === process.active?.pid) {
+                    //         dispatch(
+                    //             updateProcessState({ state: PyProcessState.EXITED })
+                    //         );
+                    //     }
+                    //     // socket.send({ type: "INSPECT", data: { path: process.active.path } })
+                    //     break;
                 }
             });
 
@@ -112,15 +98,14 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
             });
             break;
         case 'socket/send':
-            if (payload.type === "RUN") {
-                dispatch(incrementProcessRequestId());
+            // if (payload.type === "RUN") {
+            //     dispatch(incrementProcessRequestId());
 
-                let { process } = getState() as RootState;
-                if (process.active) {
-                    payload.data.request_id = process.active.requestId;
-                }
-            }
-
+            //     let { process } = getState() as RootState;
+            //     if (process.active) {
+            //         payload.data.request_id = process.active.requestId;
+            //     }
+            // }
             socket.send(payload);
             break;
         case 'socket/disconnect':
