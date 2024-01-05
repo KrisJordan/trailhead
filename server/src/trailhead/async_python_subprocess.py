@@ -14,7 +14,6 @@ class AsyncPythonSubprocess:
     def __init__(self, module: str, client: WebSocket):
         self._module = module
         self._client = client
-        print("Awaiting receive")
         self._process = None
 
     async def start(self):
