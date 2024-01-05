@@ -27,7 +27,7 @@ const processSlice = createSlice({
             state.active = {
                 ...action.payload,
                 requestId: state.active?.requestId || 0
-            }
+            };
         },
         updateProcessState(state, action: PayloadAction<{ pid?: number, state: PyProcessState }>) {
             if (state.active === null) {
@@ -57,7 +57,6 @@ const processSlice = createSlice({
                     prevEntry.endTime = time;
                     prevEntry.children.push(stdioLine);
                 } else {
-                    console.log("initial group");
                     state.stdio.push({ type: 'stdout_group', children: [stdioLine], endTime: time, startTime: time });
                 }
             } else { // stderr and stdio

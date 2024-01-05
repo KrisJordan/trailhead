@@ -9,11 +9,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./app/store";
 import { clearStdIO, updateStdIn } from "./features/process";
 
-interface PyProcessUIProps {
-    pyProcess: PyProcess
-}
 
-export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
+export function PyProcessUI() {
     // const { lastMessage, sendJsonMessage } = useWebSocket();
     const pyProcess = useSelector<RootState, PyProcess | null>((state) => state.process.active);
     const stdio = useSelector<RootState, StdIO[]>((state) => state.process.stdio);
@@ -23,7 +20,7 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
     const runAgain = () => {
         dispatch({
             type: 'socket/send',
-            payload: { type: "RUN", data: { module: props.pyProcess.module } }
+            payload: { type: "RUN", data: { module: pyProcess?.module } }
         })
         dispatch(clearStdIO());
     };
@@ -153,7 +150,7 @@ export function PyProcessUI(props: PropsWithChildren<PyProcessUIProps>) {
         //         throw new Error("Expected line === stdinLine");
         //     }
         // });
-    }, [stdinValue]);
+    }, [stdinValue, pyProcess]);
 
     let runAgainButton: React.ReactElement | undefined;
     if (status === 'Completed') {

@@ -5,9 +5,11 @@ import { PyProcessUI } from "./PyProcessUI";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./app/store";
 import { setProcess } from "./features/process";
+import { ReadyState } from "./utils/Socket";
 
 export function PyModule() {
     const runningProcess = useSelector<RootState, PyProcess | null>(state => state.process.active);
+    const socketReadyState = useSelector<RootState, ReadyState>(state => state.socket.readyState);
     const moduleName = useLoaderData();
     const location = useLocation();
     const dispatch = useDispatch();
@@ -29,11 +31,11 @@ export function PyModule() {
     let isRunning = false;
 
     useEffect(() => {
-        if (moduleName && !isRunning) {
+        if (moduleName && !isRunning && socketReadyState === ReadyState.OPEN) {
             runModule(moduleName as string);
             isRunning = true;
         }
-    }, [location]);
+    }, [location, socketReadyState]);
 
-    return runningProcess !== null ? <PyProcessUI pyProcess={runningProcess} /> : <></>;
+    return runningProcess !== null ? <PyProcessUI /> : <></>;
 }

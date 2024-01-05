@@ -5,7 +5,7 @@ import { update as setFiles } from '../features/files';
 import { updateReadyState } from '../features/socket';
 import { updateProcessState, appendStdIO, clearStdIO, incrementProcessRequestId } from '../features/process';
 import { PyProcessState } from '../PyProcess';
-import { PayloadAction } from '@reduxjs/toolkit';
+import { PayloadAction, buildCreateSlice } from '@reduxjs/toolkit';
 import { RootState } from '../app/store';
 
 // Explained in far more detail here: https://www.taniarascia.com/websockets-in-redux/
@@ -43,7 +43,8 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
                         break;
                     case 'RUNNING':
                         dispatch(clearStdIO());
-                        if (message.data.requestId === process.active?.requestId) {
+
+                        if (message.data.request_id === process.active?.requestId) {
                             dispatch(
                                 updateProcessState({ pid: message?.data.pid, state: PyProcessState.RUNNING })
                             );
@@ -88,7 +89,7 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
                         clearStdIO();
                         break;
                     case 'EXIT':
-                        if (message.data.requestId === process.active?.requestId) {
+                        if (message.data.pid === process.active?.pid) {
                             dispatch(
                                 updateProcessState({ state: PyProcessState.EXITED })
                             );
@@ -111,10 +112,10 @@ export const websocketMiddlewareFactory = (socket: Socket) => (params: any) => (
             });
             break;
         case 'socket/send':
-            if (payload.type === 'RUN') {
+            if (payload.type === "RUN") {
                 dispatch(incrementProcessRequestId());
 
-                const { process } = getState() as RootState;
+                let { process } = getState() as RootState;
                 if (process.active) {
                     payload.data.request_id = process.active.requestId;
                 }

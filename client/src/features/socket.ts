@@ -1,18 +1,19 @@
 import { PayloadAction, createSlice } from '@reduxjs/toolkit';
+import { ReadyState } from '../utils/Socket';
 
 export interface SocketState {
-    readyState: number;
+    readyState: ReadyState;
 }
 
 const initialState: SocketState = {
-    readyState: 0
+    readyState: ReadyState.UNINITIALIZED
 }
 
 const socketSlice = createSlice({
     name: 'socket',
     initialState,
     reducers: {
-        updateReadyState(state, action: PayloadAction<number>) {
+        updateReadyState(state, action: PayloadAction<ReadyState>) {
             state.readyState = action.payload;
         }
     }

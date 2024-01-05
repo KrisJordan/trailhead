@@ -1,10 +1,11 @@
 import { useState, useEffect, PropsWithChildren } from 'react';
-import useWebSocket, { ReadyState } from './useWebSocket';
+import useWebSocket from './useWebSocket';
 import { parseJsonMessage } from './Message';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from './app/store';
 import { SocketState } from './features/socket';
 import { FilesState } from './features/files';
+import { ReadyState } from './utils/Socket';
 
 export interface Tree {
     ns_type: 'tree'
@@ -29,25 +30,10 @@ interface NamespaceTreeProps {
 }
 
 function NamespaceTree(props: PropsWithChildren<NamespaceTreeProps>) {
-    const { lastMessage, sendJsonMessage } = useWebSocket();
     // const [files, setFiles] = useState<Tree>({ ns_type: 'tree', children: [] });
     const files = useSelector<RootState, FilesState>((state) => state.files);
-    const { readyState } = useSelector<RootState, SocketState>((state) => state.socket);
+    const readyState = useSelector<RootState, ReadyState>((state) => state.socket.readyState);
     const dispatch = useDispatch();
-
-    useEffect(() => {
-        let message = parseJsonMessage(lastMessage);
-        if (message) {
-            switch (message.type) {
-                case 'LS':
-                    // setFiles(message.data.files);
-                    break;
-                case 'directory_modified':
-                    sendJsonMessage({ type: "LS", data: { path: "/" } });
-                    break;
-            }
-        }
-    }, [lastMessage]);
 
     useEffect(() => {
         if (readyState === ReadyState.OPEN) {

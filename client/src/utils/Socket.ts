@@ -41,6 +41,7 @@ class Socket {
 }
 
 const enum ReadyState {
+    UNINITIALIZED = -1,
     CONNECTING = 0,
     OPEN = 1,
     CLOSING = 2,
