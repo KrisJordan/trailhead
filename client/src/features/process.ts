@@ -1,7 +1,6 @@
 import { PayloadAction, createSlice } from '@reduxjs/toolkit';
 import { PyProcess, PyProcessState } from '../PyProcess';
-import { StdIO, StdIn, StdOut, StdOutGroup } from '../StdIOTypes';
-import store from '../app/store';
+import { StdIO, StdOut, StdOutGroup } from '../StdIOTypes';
 
 // StdOutGroups are handled internally for display only - we only want to accept StdOut
 type StdIOUpdate = Exclude<StdIO, StdOutGroup> | StdOut;

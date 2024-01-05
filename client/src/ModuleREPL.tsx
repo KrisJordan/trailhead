@@ -1,14 +1,14 @@
 import { useSelector } from "react-redux";
-import { ModuleState } from "./features/module";
+import { ModuleState, ParameterInfo } from "./features/module";
 import { RootState } from "./app/store";
 
 export function ModuleREPL() {
     const module = useSelector<RootState, ModuleState>((state) => state.module);
-    let functionDefinitions = module.info.top_level_functions.map((fn, idx) =>
-        <div className="collapse bg-base-200 mb-4">
+    let functionDefinitions = module.info?.top_level_functions.map((fn, idx) =>
+        <div className="collapse bg-base-200 mb-4" key={idx}>
             <input type="checkbox" />
             <p key={fn.name} className="collapse-title mb-2">
-                <code>{fn.name}({fn.parameters.map((p) => `${p.name}: ${p.type}`).join(", ")}) -&gt; {fn.return_type}</code>
+                <code>{fn.name}({fn.parameters.map((p: ParameterInfo) => `${p.name}: ${p.type}`).join(", ")}) -&gt; {fn.return_type}</code>
                 <p className="italic ml-2">{fn.doc}</p>
             </p>
             <div className="collapse-content">

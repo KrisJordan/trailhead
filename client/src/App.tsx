@@ -1,26 +1,24 @@
-import { useEffect, useState, useCallback } from 'react'
-import useWebSocket from './useWebSocket';
+import { useEffect, useState } from 'react'
 import NamespaceTree from './NamespaceTree';
-import { Message } from './Message';
-import { Module } from './NamespaceTree';
-import { PyProcess, PyProcessState } from './PyProcess';
-import { Outlet, useNavigate } from 'react-router-dom';
+// import { Module } from './NamespaceTree';
+import { PyProcess } from './PyProcess';
+import { Outlet } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 
 import './App.css';
 import { useDispatch, useSelector } from 'react-redux';
-import { parseModuleFromFile } from './utils/ModuleTools';
-import { ProcessState, clearProcess, clearStdIO, setProcess } from './features/process';
+// import { parseModuleFromFile } from './utils/ModuleTools';
+// import { clearStdIO } from './features/process';
 import { RootState } from './app/store';
 
 function App() {
-    const [messageHistory, setMessageHistory] = useState<string[]>([]);
+    // const [messageHistory, setMessageHistory] = useState<string[]>([]);
     // const [runningProcess, setRunningProcess] = useState<PyProcess | null>(null);
     const runningProcess = useSelector<RootState, PyProcess | null>(state => state.process.active);
-    const [requestId, setRequestId] = useState<number>(0);
+    // const [requestId, setRequestId] = useState<number>(0);
     const [showFiles, setShowFiles] = useState<boolean>(true);
     const dispatch = useDispatch();
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     useEffect(() => {
         dispatch({ type: 'socket/connect' });
@@ -45,11 +43,11 @@ function App() {
     //     [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
     // }[readyState];
 
-    function routeToModuleRunner(module: Module) {
-        let moduleStr = parseModuleFromFile(module.full_path);
-        dispatch(clearStdIO());
-        navigate(`/module/${moduleStr}/run`);
-    }
+    // function routeToModuleRunner(module: Module) {
+    //     let moduleStr = parseModuleFromFile(module.full_path);
+    //     dispatch(clearStdIO());
+    //     navigate(`/module/${moduleStr}/run`);
+    // }
 
     return <>
         <div className="navbar bg-neutral text-neutral-content rounded-box">
@@ -60,7 +58,7 @@ function App() {
         </div>
         <div className="flex">
             <div className={`flex-none ${!showFiles && 'hidden'}`}>
-                <NamespaceTree selectModule={routeToModuleRunner} />
+                <NamespaceTree />
             </div>
             <div className="mt-4 container">
                 <Outlet />

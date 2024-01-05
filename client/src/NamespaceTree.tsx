@@ -1,8 +1,6 @@
-import { useEffect, PropsWithChildren } from 'react';
-import { parseJsonMessage } from './Message';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from './app/store';
-import { SocketState } from './features/socket';
 import { FilesState } from './features/files';
 import { ReadyState } from './utils/Socket';
 import { NavLink } from 'react-router-dom';

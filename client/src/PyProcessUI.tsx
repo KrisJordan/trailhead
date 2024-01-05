@@ -1,10 +1,8 @@
-import React, { PropsWithChildren, useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { PyProcess, PyProcessState } from "./PyProcess";
-import useWebSocket from "./useWebSocket";
-import { parseJsonMessage } from "./Message";
 import { StdErrMessage } from "./StdErrMessage";
 import { StdOutGroupContainer } from "./StdOutGroupContainer";
-import { StdIn, StdOutGroup, StdIO } from "./StdIOTypes";
+import { StdIO } from "./StdIOTypes";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./app/store";
 import { clearStdIO, updateStdIn } from "./features/process";
@@ -121,11 +119,11 @@ export function PyProcessUI() {
         setStdinValue(event.target.value);
     };
 
-    const handleStdInSend = useCallback((lineIndex: number, stdinLine: StdIn) => {
+    const handleStdInSend = useCallback((lineIndex: number, stdinLine: string) => {
         dispatch(
             updateStdIn({
                 lineIndex: lineIndex,
-                stdinValue: stdinValue
+                stdinValue: stdinLine
             })
         );
         dispatch({
@@ -172,8 +170,8 @@ export function PyProcessUI() {
                             return <div key={idx}>
                                 {line.prompt}
                                 <div className="flex">
-                                    <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx, line); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
-                                    <button onClick={() => handleStdInSend(idx, line)} className="btn btn-primary ml-4">Send</button>
+                                    <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx, line.response!); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
+                                    <button onClick={() => handleStdInSend(idx, line.response!)} className="btn btn-primary ml-4">Send</button>
                                 </div>
                             </div>
                         } else {
