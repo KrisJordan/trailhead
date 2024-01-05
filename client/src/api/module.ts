@@ -7,24 +7,30 @@ export const moduleLoader = async ({ params, request }: any) => {
         // TODO: Error handling...
         let moduleInfoResponse = await fetch(`/api/module/${params.moduleName}`);
         let moduleInfo = await moduleInfoResponse.json() as ModuleInfo;
-        store.dispatch(setModule({ module: params.moduleName, info: moduleInfo}));
+        store.dispatch(setModule({ module: params.moduleName, info: moduleInfo }));
 
         /* Here we "sniff" the module to see whether it looks like just function definitions and
            redirect to one of the top-level tools if so. */
-        let target = `/new/module/${params.moduleName}`
-        if (moduleInfo.top_level_calls && moduleInfo.top_level_calls.length > 0) {
-            target += "/run";
-        } else if (moduleInfo.top_level_functions && moduleInfo.top_level_functions.length > 0) {
-            target += "/repl";
-        } else {
-            target += "/run";
-        }
+        let target = `/new/module/${params.moduleName}`;
 
         /* This is a bit of a hack to make sure that we don't get into a redirect loop. */
+        /* This also ensures that we don't jump to a different tab than the one a user is on. */
+        /* The auto-redirect is only meant at the top-route level of the module, not at the individual
+           tools which we are redirecting to. */
         const windowLocation = window.location.protocol + "//" + window.location.host;
         const requestUrl = request.url.replace(windowLocation, "");
-        if (requestUrl !== target) {
-            router.navigate(target);
+        if (target === requestUrl) {
+            if (moduleInfo.top_level_calls && moduleInfo.top_level_calls.length > 0) {
+                target += "/run";
+            } else if (moduleInfo.top_level_functions && moduleInfo.top_level_functions.length > 0) {
+                target += "/repl";
+            } else {
+                target += "/run";
+            }
+
+            if (requestUrl !== target) {
+                router.navigate(target);
+            }
         }
     } else {
         store.dispatch(clearModule());

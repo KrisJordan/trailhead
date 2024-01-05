@@ -5,12 +5,12 @@ import { RootState } from "./app/store";
 export function ModuleREPL() {
     const module = useSelector<RootState, ModuleState>((state) => state.module);
     let functionDefinitions = module.info?.top_level_functions.map((fn, idx) =>
-        <div className="collapse bg-base-200 mb-4" key={idx}>
+        <div className="collapse bg-base-200 mb-2 p-0" key={idx}>
             <input type="checkbox" />
-            <p key={fn.name} className="collapse-title mb-2">
-                <code>{fn.name}({fn.parameters.map((p: ParameterInfo) => `${p.name}: ${p.type}`).join(", ")}) -&gt; {fn.return_type}</code>
-                <p className="italic ml-2">{fn.doc}</p>
-            </p>
+            <div key={fn.name} className="collapse-title">
+                <code className="mb-0">{fn.name}({fn.parameters.map((p: ParameterInfo) => `${p.name}: ${p.type}`).join(", ")}) -&gt; {fn.return_type}</code>
+                <p className="italic ml-2 mt-0 mb-0 p-0">{fn.doc}</p>
+            </div>
             <div className="collapse-content">
                 <pre className="bg-primary p-4 rounded-lg"><code>{fn.source}</code></pre>
             </div>
