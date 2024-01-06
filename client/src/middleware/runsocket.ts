@@ -29,7 +29,7 @@ export const runsocketMiddlewareFactory = () => {
                         socket.disconnect();
                     }
                     const endpoint = payload.endpoint as string;
-                    socket = new Socket(endpoint);
+                    socket = new Socket(endpoint, 1000);
 
                     setReadyState(0);
                     socket.connect();

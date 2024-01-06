@@ -31,7 +31,7 @@ class Socket {
         }
 
         if (this.reconnectTimeout > 0) {
-            this.socket.addEventListener("close", this.autoReconnect.bind(this));
+            this.socket.addEventListener("close", this.autoReconnectHandler.bind(this));
         }
     }
 
@@ -42,7 +42,7 @@ class Socket {
     disconnect() {
         if (this.socket) {
             this.eventHandlers = {};
-            this.socket.removeEventListener('close', this.autoReconnect);
+            this.socket.removeEventListener('close', this.autoReconnectHandler);
             this.socket.close();
         }
 
@@ -82,8 +82,8 @@ class Socket {
         }
     }
 
-    private autoReconnect() {
-        if (this.reconnectTimeout < 0) {
+    private autoReconnectHandler(event: CloseEvent) {
+        if (this.reconnectTimeout < 0 || event.code === 1000) {
             return;
         }
 
