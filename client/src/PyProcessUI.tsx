@@ -80,9 +80,11 @@ export function PyProcessUI() {
                             </div>
                         </div>
                     } else {
-                        return <div key={idx} className="mb-4 text-xl flex">
+                        return <div key={idx} className="mb-4 text-xl">
                             {linePrompt}
-                            <input autoFocus={true} type="text" className="input input-bordered flex-1" value={line.response} disabled={true}></input>
+                            <div className="flex">
+                                <input autoFocus={true} type="text" className="input input-bordered flex-1" value={line.response} disabled={true}></input>
+                            </div>
                         </div>
                     }
                 case 'stderr':
