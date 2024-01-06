@@ -44,8 +44,8 @@ export function PyProcessUI() {
         setStdinValue(event.target.value);
     };
 
-    const handleStdInSend = useCallback((lineIndex: number, stdinLine: any) => {
-        stdinLine.response = stdinValue;
+    const handleStdInSend = useCallback((lineIndex: number) => {
+        setStdinValue("");
         dispatch(
             updateStdIn({
                 lineIndex: lineIndex,
@@ -68,12 +68,12 @@ export function PyProcessUI() {
                         return <div key={idx} className="mb-4 text-xl">
                             <div className="mb-4">{line.prompt}</div>
                             <div className="flex">
-                                <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx, line); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
-                                <button onClick={() => handleStdInSend(idx, line)} className="btn btn-primary ml-4">Send</button>
+                                <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
+                                <button onClick={() => handleStdInSend(idx)} className="btn btn-primary ml-4">Send</button>
                             </div>
                         </div>
                     } else {
-                        return <p key={idx}>{line.prompt}<br />
+                        return <p key={idx} className="mb-4 text-xl">{line.prompt}<br />
                             <input autoFocus={true} type="text" className="input input-bordered w-full max-w-xs" value={line.response} disabled={true}></input>
                         </p>
                     }
