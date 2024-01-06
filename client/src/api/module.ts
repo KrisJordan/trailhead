@@ -3,11 +3,20 @@ import store from "../app/store";
 import router from "../routes";
 
 export const runLoader = async ({ params }: any) => {
-    console.log('runLoader');
     store.dispatch({
         type: "runsocket/connect",
         payload: {
             endpoint: `/ws/${params.moduleName}/run`
+        }
+    });
+    return null;
+};
+
+export const replLoader = async ({ params }: any) => {
+    store.dispatch({
+        type: "runsocket/connect",
+        payload: {
+            endpoint: `/ws/${params.moduleName}/repl`
         }
     });
     return null;

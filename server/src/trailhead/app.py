@@ -84,6 +84,40 @@ async def run_module(module: str, client: WebSocket):
             await client.close()
 
 
+@app.websocket("/ws/{module}/repl")
+async def repl_module(module: str, client: WebSocket):
+    """The FastAPI web socket endpoint dispatches out to Web Socket Manager."""
+    await client.accept()
+    try:
+        # Begin the async_python_subprocess
+        subprocess = AsyncPythonSubprocess(module, client, "trailhead.wrappers.repl")
+        pid = await subprocess.start()
+        response = WebSocketEvent(type="RUNNING", data={"pid": pid})
+        await client.send_text(response.model_dump_json())
+        while not subprocess.subprocess_exited():
+            try:
+                data = await asyncio.wait_for(client.receive_text(), timeout=0.1)
+                event = WebSocketEvent.model_validate_json(data)
+                match event.type:
+                    case "KILL":
+                        subprocess.kill()
+                    case "STDIN":
+                        subprocess.write(event.data["data"])
+
+            except asyncio.TimeoutError:
+                # Expected while waiting for client input
+                pass
+        await subprocess.await_end()
+    except Exception as e:
+        print(e, sys.stderr)
+    finally:
+        if not subprocess.subprocess_exited():
+            subprocess.kill()
+
+        if client.client_state == WebSocketState.CONNECTED:
+            await client.close()
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(client: WebSocket):
     """The FastAPI web socket endpoint dispatches out to Web Socket Manager."""

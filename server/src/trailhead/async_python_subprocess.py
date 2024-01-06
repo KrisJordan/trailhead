@@ -11,9 +11,12 @@ from .web_socket_event import WebSocketEvent
 
 
 class AsyncPythonSubprocess:
-    def __init__(self, module: str, client: WebSocket):
+    def __init__(
+        self, module: str, client: WebSocket, wrapper: str = "trailhead.wrappers.module"
+    ):
         self._module = module
         self._client = client
+        self._wrapper = wrapper
         self._process = None
 
     async def start(self):
@@ -57,7 +60,7 @@ class AsyncPythonSubprocess:
                 "-u",
                 "-Xfrozen_modules=off",
                 "-m",
-                "trailhead.wrappers.module",
+                self._wrapper,
                 self._module,
             ],
             stdout=subprocess.PIPE,

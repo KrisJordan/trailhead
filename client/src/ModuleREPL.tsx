@@ -1,6 +1,7 @@
 import { useSelector } from "react-redux";
 import { ModuleState, ParameterInfo } from "./features/module";
 import { RootState } from "./app/store";
+import { PyProcessUI } from "./PyProcessUI";
 
 export function ModuleREPL() {
     const module = useSelector<RootState, ModuleState>((state) => state.module);
@@ -21,7 +22,6 @@ export function ModuleREPL() {
         <h1 className="font-bold text-xl mb-4">Functions Defined</h1>
         {functionDefinitions}
         <div className="divider lg:divider-vertical divider-secondary" />
-        <h1 className="font-bold text-xl mb-4">Interactive REPL...</h1>
-        <h2>TODO</h2>
+        <PyProcessUI />
     </>
 }
