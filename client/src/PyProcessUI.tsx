@@ -47,7 +47,7 @@ export function PyProcessUI() {
             } else {
                 footer = <div className="text-right">
                     <div className="divider mb-4"></div>
-                    <div className={statusBadgeClass}>{status}</div> <NavLink to={`/module/${pyProcess.module}/run`} className="btn btn-primary ml-2"><Icon icon="mdi:reload"></Icon></NavLink>
+                    <div className={statusBadgeClass}>{status}</div> <NavLink to={`/module/${pyProcess.module}/run`} className="btn btn-primary ml-2"><Icon icon="mdi:reload"></Icon> Run Again</NavLink>
                 </div>;
             }
             break;
