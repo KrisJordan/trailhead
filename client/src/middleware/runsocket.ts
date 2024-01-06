@@ -1,5 +1,5 @@
 import { Socket } from '../utils/Socket';
-import { updateReadyState } from '../features/socket';
+// import { updateReadyState } from '../features/socket';
 
 import { updateProcessState, appendStdIO, clearStdIO, setProcess } from '../features/process';
 import { PyProcessState } from '../PyProcess';
@@ -13,9 +13,9 @@ export const runsocketMiddlewareFactory = () => {
 
     return (params: any) => {
         const { dispatch, getState } = params;
-        function setReadyState(readyState: number) {
-            dispatch(updateReadyState(readyState));
-        }
+        // function setReadyState(readyState: number) {
+        //     // dispatch(updateReadyState(readyState));
+        // }
 
         return (next: any) => (action: any) => {
             const { type, payload } = action as { type: string, payload: any };

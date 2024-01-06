@@ -65,8 +65,8 @@ export function Home() {
             break;
         case WebSocket.CLOSING:
         case WebSocket.CLOSED:
-            indicator = <div className="tooltip tooltip-bottom tooltip-error text-white mr-4" data-tip="Disconnected">
-                <div className="badge badge-lg badge-error mt-2"></div>
+            indicator = <div className="tooltip tooltip-bottom tooltip-error text-white mr-4" data-tip="Please Restart Trailhead and Refresh">
+                <div className="badge badge-lg badge-error mt-2 font-bold">Disconnected</div>
             </div>;
             break;
     }
