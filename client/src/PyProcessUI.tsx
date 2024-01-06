@@ -64,18 +64,26 @@ export function PyProcessUI() {
         {stdio.map((line, idx) => {
             switch (line.type) {
                 case 'stdin':
+                    let linePrompt;
+                    if (line.prompt !== ">>> ") {
+                        linePrompt = <div className="mb-4">{line.prompt}</div>;
+                    } else {
+                        linePrompt = null;
+                    }
+
                     if (line.response === undefined) {
                         return <div key={idx} className="mb-4 text-xl">
-                            <div className="mb-4">{line.prompt}</div>
+                            {linePrompt}
                             <div className="flex">
                                 <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
                                 <button onClick={() => handleStdInSend(idx)} className="btn btn-primary ml-4">Send</button>
                             </div>
                         </div>
                     } else {
-                        return <p key={idx} className="mb-4 text-xl">{line.prompt}<br />
-                            <input autoFocus={true} type="text" className="input input-bordered w-full max-w-xs" value={line.response} disabled={true}></input>
-                        </p>
+                        return <div key={idx} className="mb-4 text-xl flex">
+                            {linePrompt}
+                            <input autoFocus={true} type="text" className="input input-bordered flex-1" value={line.response} disabled={true}></input>
+                        </div>
                     }
                 case 'stderr':
                     return <StdErrMessage key={idx} line={line.line} />;
