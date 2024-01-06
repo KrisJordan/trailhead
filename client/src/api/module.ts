@@ -6,6 +6,7 @@ export const runLoader = async ({ params }: any) => {
     store.dispatch({
         type: "runsocket/connect",
         payload: {
+            module: params.moduleName,
             endpoint: `/ws/${params.moduleName}/run`
         }
     });
@@ -16,6 +17,7 @@ export const replLoader = async ({ params }: any) => {
     store.dispatch({
         type: "runsocket/connect",
         payload: {
+            module: params.moduleName,
             endpoint: `/ws/${params.moduleName}/repl`
         }
     });

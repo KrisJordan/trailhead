@@ -23,7 +23,7 @@ export function ModuleREPL() {
         {functionDefinitions}
         <div className="divider lg:divider-vertical divider-secondary" />
         <h1 className="font-bold text-xl mb-4">REPL: Read, Evaluate, Print, Loop</h1>
-        <p>The <code>{module.info?.name}</code> module definitions are loaded in the REPL below...</p>
-        <PyProcessUI />
+        <p className="mb-4 italic">The <code>{module.info?.name}</code> module definitions are loaded in the REPL below...</p>
+        <PyProcessUI key={`${module.info?.name}-repl`} />
     </>
 }
