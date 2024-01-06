@@ -25,7 +25,7 @@ try:
     module = importlib.import_module(module_name)
     local_scope = vars(module).copy()
     console = code.InteractiveConsole(locals=local_scope)
-    console.interact()
+    console.interact(banner="")
 
 except Exception as e:
     tb_info = traceback.extract_tb(e.__traceback__)

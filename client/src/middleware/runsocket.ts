@@ -31,11 +31,11 @@ export const runsocketMiddlewareFactory = () => {
                     const endpoint = payload.endpoint as string;
                     socket = new Socket(endpoint);
 
-                    setReadyState(0);
+                    // setReadyState(0);
                     socket.connect();
 
                     socket.on('open', () => {
-                        setReadyState(WebSocket.OPEN);
+                        // setReadyState(WebSocket.OPEN);
                     });
 
                     socket.on('message', (data: MessageEvent) => {
@@ -87,11 +87,11 @@ export const runsocketMiddlewareFactory = () => {
                     });
 
                     socket.on('error', () => {
-                        setReadyState(WebSocket.CLOSED);
+                        // setReadyState(WebSocket.CLOSED);
                     });
 
                     socket.on('closed', () => {
-                        setReadyState(WebSocket.CLOSED);
+                        // setReadyState(WebSocket.CLOSED);
                     });
                     break;
 
@@ -100,7 +100,7 @@ export const runsocketMiddlewareFactory = () => {
                     break;
 
                 case 'runsocket/disconnect':
-                    setReadyState(2);
+                    // setReadyState(2);
                     socket?.disconnect();
                     break;
 
