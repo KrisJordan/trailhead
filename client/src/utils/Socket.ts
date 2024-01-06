@@ -1,9 +1,20 @@
 import { Message } from "../Message";
 
+interface EventHandlerCollection {
+    [evt: string]: ((data?: any) => {})[]
+}
+
+const WebSocketEvents = ["close", "error", "message", "open"];
+
 class Socket {
     socket: WebSocket | null = null
+    eventHandlers: EventHandlerCollection = {};
 
-    constructor(private path: string = "/ws") { }
+    // Any negative value for reconnectTimeout indicates it should not try to reconnect
+    constructor(
+        private path: string = "/ws",
+        private reconnectTimeout: number = -1
+    ) { }
 
     connect() {
         if (this.socket) {
@@ -14,6 +25,14 @@ class Socket {
         const PROTOCOL = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
         const WS_ENDPOINT = `${PROTOCOL}//${HOST}${this.path}`;
         this.socket = new WebSocket(WS_ENDPOINT);
+
+        for (let eventName of WebSocketEvents) {
+            this.socket.addEventListener(eventName, this.handleEvent.bind(this, eventName));
+        }
+
+        if (this.reconnectTimeout > 0) {
+            this.socket.addEventListener("close", this.autoReconnect.bind(this));
+        }
     }
 
     isConnected() {
@@ -22,9 +41,13 @@ class Socket {
 
     disconnect() {
         if (this.socket) {
+            this.eventHandlers = {};
+            this.socket.removeEventListener('close', this.autoReconnect);
             this.socket.close();
-            this.socket = null;
         }
+
+        this.reconnectTimeout = -1;
+        this.socket = null;
     }
 
     send(message: Message) {
@@ -34,9 +57,42 @@ class Socket {
     }
 
     on(eventName: string, callback: any) {
-        if (this.socket) {
-            this.socket.addEventListener(eventName, callback);
+        if (this.eventHandlers[eventName]) {
+            this.eventHandlers[eventName].push(callback);
+        } else {
+            this.eventHandlers[eventName] = [callback];
         }
+    }
+
+    readyState() {
+        if (this.socket) {
+            return this.socket.readyState;
+        }
+    }
+
+    private handleEvent(eventName: string, data: any) {
+        if (!this.eventHandlers[eventName]) {
+            return;
+        }
+
+        for (let handler of this.eventHandlers[eventName]) {
+            setTimeout(() => {
+                handler(data);
+            }, 0);
+        }
+    }
+
+    private autoReconnect() {
+        if (this.reconnectTimeout < 0) {
+            return;
+        }
+
+        console.log(`Connection lost. Attempting reconnect in ${this.reconnectTimeout}ms`);
+        this.socket = null;
+
+        setTimeout(() => {
+            this.connect();
+        }, this.reconnectTimeout);
     }
 }
 
