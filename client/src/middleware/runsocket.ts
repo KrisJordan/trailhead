@@ -1,5 +1,5 @@
 import { Socket } from '../utils/Socket';
-import { updateReadyState } from '../features/socket';
+// import { updateReadyState } from '../features/socket';
 
 import { updateProcessState, appendStdIO, clearStdIO, setProcess } from '../features/process';
 import { PyProcessState } from '../PyProcess';
@@ -8,14 +8,13 @@ import { parseJsonMessage } from '../Message';
 
 export const runsocketMiddlewareFactory = () => {
 
-    console.log("Run socket initialized");
     let socket: Socket | null;
 
     return (params: any) => {
         const { dispatch, getState } = params;
-        function setReadyState(readyState: number) {
-            dispatch(updateReadyState(readyState));
-        }
+        // function setReadyState(readyState: number) {
+        //     // dispatch(updateReadyState(readyState));
+        // }
 
         return (next: any) => (action: any) => {
             const { type, payload } = action as { type: string, payload: any };
@@ -29,14 +28,15 @@ export const runsocketMiddlewareFactory = () => {
                         socket.disconnect();
                     }
                     const endpoint = payload.endpoint as string;
-                    socket = new Socket(endpoint, 1000);
+                    const module = payload.module as string;
 
-                    setReadyState(0);
+                    socket = new Socket(endpoint);
+
+                    // setReadyState(0);
                     socket.connect();
+                    dispatch(setProcess({ pid: 0, module: module, path: 'TODO', state: PyProcessState.STARTING }));
 
-                    socket.on('open', () => {
-                        setReadyState(WebSocket.OPEN);
-                    });
+                    socket.on('open', () => { });
 
                     socket.on('message', (data: MessageEvent) => {
                         const message = parseJsonMessage(data);
@@ -51,7 +51,7 @@ export const runsocketMiddlewareFactory = () => {
                         switch (message.type) {
                             case 'RUNNING':
                                 dispatch(clearStdIO());
-                                dispatch(setProcess({ pid: message?.data.pid, module: 'foo', path: 'foo', state: PyProcessState.RUNNING }));
+                                dispatch(setProcess({ pid: message?.data.pid, module: module, path: 'TODO', state: PyProcessState.RUNNING }));
                                 break;
                             case 'STDOUT':
                                 if (message.data.is_input_prompt) {
@@ -76,10 +76,9 @@ export const runsocketMiddlewareFactory = () => {
                                 );
                                 break;
                             case 'EXIT':
-                                console.log('done');
                                 if (message.data.pid === process.active?.pid) {
                                     dispatch(
-                                        updateProcessState({ state: PyProcessState.EXITED })
+                                        updateProcessState({ state: PyProcessState.EXITED })  // TODO: Add exit code
                                     );
                                 }
                                 break;
@@ -87,11 +86,11 @@ export const runsocketMiddlewareFactory = () => {
                     });
 
                     socket.on('error', () => {
-                        setReadyState(WebSocket.CLOSED);
+                        // setReadyState(WebSocket.CLOSED);
                     });
 
                     socket.on('closed', () => {
-                        setReadyState(WebSocket.CLOSED);
+                        // setReadyState(WebSocket.CLOSED);
                     });
                     break;
 
@@ -100,7 +99,7 @@ export const runsocketMiddlewareFactory = () => {
                     break;
 
                 case 'runsocket/disconnect':
-                    setReadyState(2);
+                    // setReadyState(2);
                     socket?.disconnect();
                     break;
 

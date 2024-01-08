@@ -6,6 +6,7 @@ export const runLoader = async ({ params }: any) => {
     store.dispatch({
         type: "runsocket/connect",
         payload: {
+            module: params.moduleName,
             endpoint: `/ws/${params.moduleName}/run`
         }
     });
@@ -16,6 +17,7 @@ export const replLoader = async ({ params }: any) => {
     store.dispatch({
         type: "runsocket/connect",
         payload: {
+            module: params.moduleName,
             endpoint: `/ws/${params.moduleName}/repl`
         }
     });
@@ -24,8 +26,14 @@ export const replLoader = async ({ params }: any) => {
 
 export const moduleLoader = async ({ params, request }: any) => {
     if (params.moduleName) {
-        // TODO: Error handling...
+        // Load the module info
         let moduleInfoResponse = await fetch(`/api/module/${params.moduleName}`);
+        if (moduleInfoResponse.status === 404) {
+            // Redirect to home if the module doesn't exist
+            router.navigate("/");
+            return null;
+        }
+
         let moduleInfo = await moduleInfoResponse.json() as ModuleInfo;
         store.dispatch(setModule({ module: params.moduleName, info: moduleInfo }));
 

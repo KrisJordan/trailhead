@@ -1,4 +1,6 @@
 import aiofiles.os
+import ast
+import pathlib
 from fastapi import WebSocket
 from .web_socket_event import WebSocketEvent
 from .async_python_subprocess import AsyncPythonSubprocess
@@ -47,12 +49,29 @@ async def web_socket_controller(client: WebSocket, event: WebSocketEvent):
     await client.send_text(response.model_dump_json())
 
 
+def _get_docstring_by_path(path: str) -> str:
+    path_obj = pathlib.Path(path)
+    if not path_obj.exists():
+        return ""
+    with open(path) as f:
+        tree = ast.parse(f.read())
+        return ast.get_docstring(tree) or ""
+
+
 async def list_files_async(directory: str) -> NamespaceTree:
     packages: list[Package | Module] = []
     for entry in await aiofiles.os.scandir(directory):
-        if entry.is_file() and entry.name.endswith(".py"):
+        if (
+            entry.is_file()
+            and entry.name.endswith(".py")
+            and not entry.name.startswith("__")
+        ):
             # If the entry is a .py file, create a Module object.
-            module = Module(name=entry.name, full_path=entry.path)
+            module = Module(
+                name=entry.name,
+                full_path=entry.path,
+                docstring=_get_docstring_by_path(entry.path),
+            )
             packages.append(module)
         elif entry.is_dir():
             if entry.name in (
@@ -67,7 +86,10 @@ async def list_files_async(directory: str) -> NamespaceTree:
                 continue
             tree = await list_files_async(entry.path)
             package = Package(
-                children=tree.children, name=entry.name, full_path=entry.path
+                children=tree.children,
+                name=entry.name,
+                full_path=entry.path,
+                docstring=_get_docstring_by_path(f"{entry.path}/__init__.py"),
             )
             packages.append(package)
     packages.sort(key=lambda o: o.name)

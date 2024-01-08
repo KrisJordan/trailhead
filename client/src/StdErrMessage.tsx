@@ -89,10 +89,10 @@ export function StdErrMessage(props: React.PropsWithChildren<StdErrProps>) {
                 {frames}
             </div>;
         } else {
-            return <p className="text-error">{props.line}</p>
+            return <p className="text-error text-xl mb-4 font-bold">{props.line}</p>
         }
     } catch (e) {
-        return <p className="text-error">{props.line}</p>
+        return <p className="text-error text-xl mb-4 font-bold">{props.line}</p>
     }
 
 }

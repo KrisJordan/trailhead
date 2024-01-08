@@ -7,7 +7,7 @@ __license__ = "MIT"
 import os
 import sys
 import asyncio
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.concurrency import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -47,7 +47,11 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/api/module/{module}")
 async def get_module(module: str) -> Module:
-    return analyze_module(f"{module}.py")
+    path = module.replace(".", "/") + ".py"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Module not found")
+    else:
+        return analyze_module(path)
 
 
 @app.websocket("/ws/{module}/run")

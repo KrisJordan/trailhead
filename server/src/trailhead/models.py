@@ -7,6 +7,7 @@ class Module(BaseModel):
     ns_type: Literal["module"] = "module"
     name: str
     full_path: str
+    docstring: str = ""
 
 
 def get_discriminator_value(v: Any) -> str | None:
@@ -29,3 +30,4 @@ class Package(NamespaceTree):
     ns_type: str = "package"
     name: str
     full_path: str
+    docstring: str = ""

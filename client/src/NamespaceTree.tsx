@@ -6,21 +6,23 @@ import { ReadyState } from './utils/Socket';
 import { NavLink } from 'react-router-dom';
 
 export interface Tree {
-    ns_type: 'tree'
+    ns_type: 'tree';
     children: (Package | Module)[];
 }
 
 export interface Package {
-    ns_type: 'package'
-    name: string
-    full_path: string
+    ns_type: 'package';
+    name: string;
+    full_path: string;
     children: (Package | Module)[];
+    docstring: string;
 }
 
 export interface Module {
-    ns_type: 'module'
-    name: string
-    full_path: string
+    ns_type: 'module';
+    name: string;
+    full_path: string;
+    docstring: string;
 }
 
 function NamespaceTree() {
@@ -45,12 +47,20 @@ function NamespaceTree() {
                     children.push(<li key={item.full_path + item.name}>
                         <NavLink to={"./module/" + item.full_path.substring(2).replace("\/", ".").replace(".py", "")} className="w-full grid grid-cols-4 hover:bg-neutral-100">
                             <span className="col-span-1">{item.name.replace(".py", "")}</span>
-                            <span className="text-neutral-400 font-light italic col-span-3">TODO: docstring...</span>
+                            <span className="text-neutral-400 font-light italic col-span-3 overflow-hidden text-ellipsis text-nowrap">{item.docstring}</span>
                         </NavLink>
                     </li>);
                     break;
                 case 'package':
-                    children.push(<li key={item.full_path + item.name}><details><summary><a>{item.name}</a></summary>{buildTree(item)}</details></li>)
+                    children.push(<li key={item.full_path + item.name}>
+                        <details className="w-full">
+                            <summary className="grid grid-cols-4">
+                                <span className="col-span-1">{item.name}</span>
+                                <span className="col-span-3 text-neutral-400 font-light italic overflow-hidden text-ellipsis text-nowrap">{item.docstring}</span>
+                            </summary>
+                            {buildTree(item)}
+                        </details>
+                    </li>)
                     break;
             }
         }

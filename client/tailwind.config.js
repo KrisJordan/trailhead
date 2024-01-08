@@ -12,9 +12,10 @@ export default {
     require("daisyui")
   ],
   daisyui: {
+    darkTheme: "trailhead",
     themes: [
       {
-        "mytheme": {
+        "trailhead": {
           "primary": "#89b855",
           "secondary": "#5a94d3",
           "accent": "#a0a851",
@@ -23,7 +24,7 @@ export default {
           "info": "#fff",
           "success": "#84cc16",
           "warning": "#94948c",
-          "error": "#662e68",
+          "error": "#ff6ec7",
         },
       }
     ]

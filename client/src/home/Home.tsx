@@ -40,14 +40,14 @@ export function Home() {
     if (module.info) {
         if (module.info.doc !== "") {
             navline = <>
-                <div className="divider lg:divider-horizontal divider-secondary" />
-                <div className="m-0 p-0 invisible lg:visible">{module.info.doc}</div>
+                <div className="md:divider md:divider-horizontal md:divider-secondary" />
+                <div className="m-0 p-0 hidden md:block overflow-hidden text-nowrap text-ellipsis">{module.info.doc}</div>
             </>
         }
     } else {
         navline = <>
-            <div className="divider lg:divider-horizontal divider-secondary" />
-            <div className="m-0 p-0 invisible lg:visible">The Adventure Starts Here</div>
+            <div className="md:divider md:divider-horizontal md:divider-secondary" />
+            <div className="m-0 p-0 invisible md:visible">The Adventure Starts Here</div>
         </>
     }
 
@@ -65,8 +65,8 @@ export function Home() {
             break;
         case WebSocket.CLOSING:
         case WebSocket.CLOSED:
-            indicator = <div className="tooltip tooltip-bottom tooltip-error text-white mr-4" data-tip="Disconnected">
-                <div className="badge badge-lg badge-error mt-2"></div>
+            indicator = <div className="tooltip tooltip-bottom tooltip-error text-white mr-4" data-tip="Please Restart Trailhead and Refresh">
+                <div className="badge badge-lg badge-error mt-2 font-bold">Disconnected</div>
             </div>;
             break;
     }
