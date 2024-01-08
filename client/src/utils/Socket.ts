@@ -94,7 +94,7 @@ class Socket {
 
     private heartbeatPollLoop() {
         const controller = new AbortController();
-        setTimeout(() => controller.abort(), 500);
+        setTimeout(() => controller.abort(), 1000);
 
         console.log(`Connection lost. Pinging heartbeat and waiting ${this.reconnectTimeout}ms before repolling.`);
 
