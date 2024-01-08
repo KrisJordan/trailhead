@@ -1,7 +1,7 @@
 import { Socket } from '../utils/Socket';
 import { parseJsonMessage } from '../Message';
 import { update as setFiles } from '../features/files';
-import { updateReadyState } from '../features/socket';
+import { updateFileReadyState } from '../features/socket';
 import router from "../routes";
 
 // Explained in far more detail here: https://www.taniarascia.com/websockets-in-redux/
@@ -14,7 +14,7 @@ export const websocketMiddlewareFactory = () => {
         const { type, payload } = action;
 
         function setReadyState(readyState: number) {
-            dispatch(updateReadyState(readyState));
+            dispatch(updateFileReadyState(readyState));
         }
 
         switch (type) {
@@ -26,7 +26,7 @@ export const websocketMiddlewareFactory = () => {
 
                 socket = new Socket('/ws', 1000);
 
-                setReadyState(0);
+                setReadyState(WebSocket.CONNECTING);
                 socket.connect();
 
                 socket.on('message', (data: MessageEvent) => {
@@ -51,22 +51,22 @@ export const websocketMiddlewareFactory = () => {
                 });
 
                 socket.on('open', () => {
-                    setReadyState(1);
+                    setReadyState(WebSocket.OPEN);
                 });
 
                 socket.on('close', () => {
-                    setReadyState(3);
+                    setReadyState(WebSocket.CLOSED);
                 });
 
                 socket.on('error', () => {
-                    setReadyState(3);
+                    setReadyState(WebSocket.CLOSED);
                 });
                 break;
             case 'socket/send':
                 socket?.send(payload);
                 break;
             case 'socket/disconnect':
-                setReadyState(2);
+                setReadyState(WebSocket.CLOSING);
                 socket?.disconnect();
                 break;
             default:

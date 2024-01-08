@@ -27,7 +27,7 @@ export interface Module {
 
 function NamespaceTree() {
     const files = useSelector<RootState, FilesState>((state) => state.files);
-    const readyState = useSelector<RootState, ReadyState>((state) => state.socket.readyState);
+    const readyState = useSelector<RootState, ReadyState>((state) => state.socket.fileSocketReadyState);
     const dispatch = useDispatch();
 
     useEffect(() => {
