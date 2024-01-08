@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Context } from "../features/module";
-import { valueToDetailsJSX, valueToInlineJSX, variableTableEntryJSX } from "./helpers";
+import { valueToDetailsJSX, variableTableEntryJSX } from "./helpers";
 
 interface ContextProps {
     context: Context | null;

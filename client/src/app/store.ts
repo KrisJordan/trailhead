@@ -4,7 +4,6 @@ import filesReducer from '../features/files';
 import socketReducer from '../features/socket';
 import moduleReducer from '../features/module';
 import { websocketMiddlewareFactory } from '../middleware/websocket';
-import { Socket } from '../utils/Socket';
 import { runsocketMiddlewareFactory } from '../middleware/runsocket';
 
 const store = configureStore({
