@@ -1,3 +1,5 @@
+import { PythonValue } from "./features/module";
+
 export type StdOut = {
     type: 'stdout';
     line: string;
@@ -14,6 +16,11 @@ export type StdIn = {
     response?: string;
 }
 
+export type ExprEval = {
+    type: 'expr_eval';
+    value: PythonValue;
+}
+
 export type StdOutGroup = {
     type: 'stdout_group';
     children: StdOut[];
@@ -21,4 +28,4 @@ export type StdOutGroup = {
     startTime: number;
 }
 
-export type StdIO = StdErr | StdIn | StdOutGroup;
+export type StdIO = StdErr | StdIn | StdOutGroup | ExprEval;

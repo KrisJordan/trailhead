@@ -17,7 +17,7 @@ export function ContextUI(props: React.PropsWithChildren<ContextProps>) {
     });
 
     const isSticky = () => {
-        if (window.scrollY > 150) {
+        if (window.scrollY > 10) {
             setSticky(true);
         } else {
             setSticky(false);
