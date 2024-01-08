@@ -75,15 +75,15 @@ class DictValue(BaseModel):
     values: list[SerializeAsAny[BaseModel]]
 
 
-class Context(BaseModel):
-    type: str = "context"
-    values: dict[str, SerializeAsAny[BaseModel]]
-
-
 class UnknownValue(BaseModel):
     type: str = "unknown"
     python_type: str
-    value: Any
+    value: str
+
+
+class Context(BaseModel):
+    type: str = "context"
+    values: dict[str, SerializeAsAny[BaseModel]]
 
 
 def bundle_globals(kvs: dict[str, Any]) -> Context:
@@ -95,14 +95,14 @@ def bundle_globals(kvs: dict[str, Any]) -> Context:
 
 
 def decompose_value(value: Any) -> BaseModel:
-    if isinstance(value, int):
+    if isinstance(value, bool):
+        return BoolValue(value=value)
+    elif isinstance(value, int):
         return IntValue(value=value)
     elif isinstance(value, float):
         return FloatValue(value=value)
     elif isinstance(value, str):
         return StringValue(value=value)
-    elif isinstance(value, bool):
-        return BoolValue(value=value)
     elif value is None:
         return NoneValue()
     elif isinstance(value, FunctionType):
@@ -154,7 +154,8 @@ def print_context(context: dict[str, Any]):
 
 def exec_callback(result: Any, globals: dict[str, Any], statement_ast: ast.Module):
     # TODO: Interesting things in the event of statements such as:
-    # 1. Assignment Statement - Print the value of the assigned variable and name of variable
+    # 1. Assignment Statement - Print the value of the assigned variable and
+    # name of variable
     # print(ast.dump(statement_ast))
 
     if result is not None:
