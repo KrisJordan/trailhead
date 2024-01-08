@@ -87,12 +87,30 @@ class Socket {
             return;
         }
 
-        console.log(`Connection lost. Attempting reconnect in ${this.reconnectTimeout}ms`);
         this.socket = null;
 
-        setTimeout(() => {
-            this.connect();
-        }, this.reconnectTimeout);
+        setTimeout(this.heartbeatPollLoop.bind(this), 0);
+    }
+
+    private heartbeatPollLoop() {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 500);
+
+        console.log(`Connection lost. Pinging heartbeat and waiting ${this.reconnectTimeout}ms before repolling.`);
+
+        fetch('/api/heartbeat', { signal: controller.signal })
+            .then((res) => {
+                if (res.ok) {
+                    return res.body;
+                }
+                throw new Error("Got status: " + res.status);
+            })
+            .then(() => {
+                this.connect();
+            })
+            .catch(() => {
+                setTimeout(this.heartbeatPollLoop.bind(this), this.reconnectTimeout);
+            });
     }
 }
 
