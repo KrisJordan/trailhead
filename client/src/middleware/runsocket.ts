@@ -32,6 +32,7 @@ export const runsocketMiddlewareFactory = () => {
 
                     socket = new Socket(endpoint, 1000);
 
+                    dispatch(clearStdIO());
                     setReadyState(WebSocket.CONNECTING);
                     socket.connect();
 
