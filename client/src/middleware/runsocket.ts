@@ -2,6 +2,7 @@ import { Socket } from '../utils/Socket';
 import { updateRunReadyState } from '../features/socket';
 
 import { updateProcessState, appendStdIO, clearStdIO, setProcess } from '../features/process';
+import { setContext } from '../features/module';
 import { PyProcessState } from '../PyProcess';
 import { RootState } from '../app/store';
 import { parseJsonMessage } from '../Message';
@@ -69,6 +70,19 @@ export const runsocketMiddlewareFactory = () => {
                                 }
                                 break;
                             case 'STDERR':
+                                /* Sniffing for REPL context coming down the stderr pipe... */
+                                try {
+                                    let parsed = JSON.parse(message?.data.data);
+                                    if (parsed.type && parsed.type === 'context') {
+                                        dispatch(setContext(parsed));
+                                        return;
+                                    }
+
+                                    if (parsed.type && parsed.type === 'expr_eval') {
+                                        dispatch(appendStdIO({ type: 'expr_eval', value: parsed.value }))
+                                        return
+                                    }
+                                } catch (e) { /* No op */ }
                                 dispatch(
                                     appendStdIO({
                                         type: 'stderr', line: message?.data.data

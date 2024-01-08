@@ -9,6 +9,7 @@ import { updateStdIn } from "./features/process";
 import { NavLink } from "react-router-dom";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { ReadyState } from "./utils/Socket";
+import { valueToInlineJSX } from "./context/helpers";
 
 
 export function PyProcessUI() {
@@ -113,6 +114,11 @@ export function PyProcessUI() {
                         return <StdErrMessage key={idx} line={line.line} />;
                     case 'stdout_group':
                         return <StdOutGroupContainer key={idx} group={line} minGroupSize={100} groupAfterRatePerSecond={60} />
+                    case 'expr_eval':
+                        return <div className="display-block p-2 rounded mb-4 bg-secondary text-white font-bold">
+                            <Icon icon="mdi:lightning-bolt" className="inline icon-lg p-0.5 mr-2" width="24"></Icon>
+                            <span className="font-mono">{valueToInlineJSX(line.value, "bg-neutral rounded text-lg m-0 p-0.5")}{line.value.type !== 'unknown' ? ` (${line.value.type})` : null}</span>
+                        </div>;
                 }
             })}
         </div>
