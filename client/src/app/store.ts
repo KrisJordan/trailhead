@@ -15,7 +15,7 @@ const store = configureStore({
         module: moduleReducer,
     },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware()
-        .concat([websocketMiddlewareFactory(new Socket()), runsocketMiddlewareFactory()])
+        .concat([websocketMiddlewareFactory(), runsocketMiddlewareFactory()])
 });
 
 export type RootState = ReturnType<typeof store.getState>;

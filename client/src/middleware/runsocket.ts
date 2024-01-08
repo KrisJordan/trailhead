@@ -1,5 +1,5 @@
 import { Socket } from '../utils/Socket';
-// import { updateReadyState } from '../features/socket';
+import { updateRunReadyState } from '../features/socket';
 
 import { updateProcessState, appendStdIO, clearStdIO, setProcess } from '../features/process';
 import { setContext } from '../features/module';
@@ -13,9 +13,9 @@ export const runsocketMiddlewareFactory = () => {
 
     return (params: any) => {
         const { dispatch, getState } = params;
-        // function setReadyState(readyState: number) {
-        //     // dispatch(updateReadyState(readyState));
-        // }
+        function setReadyState(readyState: number) {
+            dispatch(updateRunReadyState(readyState));
+        }
 
         return (next: any) => (action: any) => {
             const { type, payload } = action as { type: string, payload: any };
@@ -31,13 +31,13 @@ export const runsocketMiddlewareFactory = () => {
                     const endpoint = payload.endpoint as string;
                     const module = payload.module as string;
 
-                    socket = new Socket(endpoint);
+                    socket = new Socket(endpoint, 1000);
 
-                    // setReadyState(0);
+                    dispatch(clearStdIO());
+                    setReadyState(WebSocket.CONNECTING);
                     socket.connect();
-                    dispatch(setProcess({ pid: 0, module: module, path: 'TODO', state: PyProcessState.STARTING }));
 
-                    socket.on('open', () => { });
+                    dispatch(setProcess({ pid: 0, module: module, path: 'TODO', state: PyProcessState.STARTING }));
 
                     socket.on('message', (data: MessageEvent) => {
                         const message = parseJsonMessage(data);
@@ -99,12 +99,16 @@ export const runsocketMiddlewareFactory = () => {
                         }
                     });
 
-                    socket.on('error', () => {
-                        // setReadyState(WebSocket.CLOSED);
+                    socket.on('open', () => {
+                        setReadyState(WebSocket.OPEN);
                     });
 
-                    socket.on('closed', () => {
-                        // setReadyState(WebSocket.CLOSED);
+                    socket.on('error', () => {
+                        setReadyState(WebSocket.CLOSED);
+                    });
+
+                    socket.on('close', () => {
+                        setReadyState(WebSocket.CLOSED);
                     });
                     break;
 
@@ -113,7 +117,7 @@ export const runsocketMiddlewareFactory = () => {
                     break;
 
                 case 'runsocket/disconnect':
-                    // setReadyState(2);
+                    setReadyState(WebSocket.CLOSING);
                     socket?.disconnect();
                     break;
 

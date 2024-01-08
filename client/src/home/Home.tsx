@@ -2,9 +2,9 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { SocketState } from "../features/socket";
 import { RootState } from "../app/store";
 import { ModuleState } from "../features/module";
+import { ReadyState } from "../utils/Socket";
 
 export interface HomeContext {
     navigateToModule: (module: string) => void;
@@ -13,7 +13,7 @@ export interface HomeContext {
 export function Home() {
     const module = useSelector<RootState, ModuleState>((state) => state.module);
     const dispatch = useDispatch();
-    const { readyState } = useSelector<RootState, SocketState>((state) => state.socket);
+    const readyState = useSelector<RootState, ReadyState>((state) => state.socket.fileSocketReadyState);
 
     // const [module, setModule] = useState<string | null>(null);
     const navigate = useNavigate();

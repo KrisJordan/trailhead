@@ -9,7 +9,7 @@ import { ReadyState } from "./utils/Socket";
 
 export function PyModule() {
     const runningProcess = useSelector<RootState, PyProcess | null>(state => state.process.active);
-    const socketReadyState = useSelector<RootState, ReadyState>(state => state.socket.readyState);
+    const socketReadyState = useSelector<RootState, ReadyState>(state => state.socket.fileSocketReadyState);
     const moduleName = useLoaderData();
     const location = useLocation();
     const dispatch = useDispatch();

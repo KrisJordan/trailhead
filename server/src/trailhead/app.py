@@ -54,6 +54,11 @@ async def get_module(module: str) -> Module:
         return analyze_module(path)
 
 
+@app.get("/api/heartbeat")
+async def get_heartbeat():
+    return "heartbeat"
+
+
 @app.websocket("/ws/{module}/run")
 async def run_module(module: str, client: WebSocket):
     """The FastAPI web socket endpoint dispatches out to Web Socket Manager."""
