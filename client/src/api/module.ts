@@ -46,7 +46,7 @@ export const moduleLoader = async ({ params, request }: any) => {
         /* The auto-redirect is only meant at the top-route level of the module, not at the individual
            tools which we are redirecting to. */
         const windowLocation = window.location.protocol + "//" + window.location.host;
-        const requestUrl = request.url.replace(windowLocation, "");
+        const requestUrl = decodeURIComponent(request.url.replace(windowLocation, ""));
         if (target === requestUrl) {
             if (moduleInfo.top_level_calls && moduleInfo.top_level_calls.length > 0) {
                 target += "/run";
