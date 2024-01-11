@@ -82,6 +82,7 @@ async def list_files_async(directory: str) -> NamespaceTree:
                 "__pycache__",
                 ".pytest_cache",
                 ".mypy_cache",
+                "tools",
             ):
                 continue
             tree = await list_files_async(entry.path)
