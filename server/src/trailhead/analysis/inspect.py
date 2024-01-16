@@ -38,8 +38,16 @@ def main() -> None:
 
 def analyze_module(file: str) -> Module:
     with open(file) as f:
-        tree = ast.parse(f.read())
-        return get_module(file, tree)
+        try:
+            tree = ast.parse(f.read())
+            return get_module(file, tree)
+        except SyntaxError:
+            return Module(
+                name=file,
+                doc="SyntaxError encountered when parsing",
+                top_level_functions=[],
+                top_level_calls=[],
+            )
 
 
 def get_module(path: str, tree: ast.Module) -> Module:
