@@ -41,10 +41,10 @@ def analyze_module(file: str) -> Module:
         try:
             tree = ast.parse(f.read())
             return get_module(file, tree)
-        except SyntaxError:
+        except Exception as e:
             return Module(
                 name=file,
-                doc="SyntaxError encountered when parsing",
+                doc=f"{type(e).__name__} encountered when parsing",
                 top_level_functions=[],
                 top_level_calls=[],
             )

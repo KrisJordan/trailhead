@@ -57,8 +57,8 @@ def _get_docstring_by_path(path: str) -> str:
         try:
             tree = ast.parse(f.read())
             return ast.get_docstring(tree) or ""
-        except SyntaxError:
-            return "SyntaxError encountered when parsing"
+        except Exception as e:
+            return f"{type(e).__name__} encountered when parsing"
 
 
 async def list_files_async(directory: str) -> NamespaceTree:
