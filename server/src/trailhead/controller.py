@@ -54,8 +54,11 @@ def _get_docstring_by_path(path: str) -> str:
     if not path_obj.exists():
         return ""
     with open(path) as f:
-        tree = ast.parse(f.read())
-        return ast.get_docstring(tree) or ""
+        try:
+            tree = ast.parse(f.read())
+            return ast.get_docstring(tree) or ""
+        except Exception as e:
+            return f"{type(e).__name__} encountered when parsing"
 
 
 async def list_files_async(directory: str) -> NamespaceTree:
