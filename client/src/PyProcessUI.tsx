@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { PyProcess, PyProcessState } from "./PyProcess";
 import { StdErrMessage } from "./StdErrMessage";
 import { StdOutGroupContainer } from "./StdOutGroupContainer";
@@ -16,7 +16,9 @@ export function PyProcessUI() {
     const pyProcess = useSelector<RootState, PyProcess | null>((state) => state.process.active);
     const stdio = useSelector<RootState, StdIO[]>((state) => state.process.stdio);
     const runReadyState = useSelector<RootState, ReadyState>((state) => state.socket.runSocketReadyState);
+    const inputHistory = useSelector<RootState, string[]>((state) => state.process.inputHistory);
     const [stdinValue, setStdinValue] = useState<string>("");
+    const [historyIndex, setHistoryIndex] = useState<number>(-1);
     const dispatch = useDispatch();
 
     let status: string = "";
@@ -66,7 +68,6 @@ export function PyProcessUI() {
     };
 
     const handleStdInSend = useCallback((lineIndex: number) => {
-        setStdinValue("");
         dispatch(
             updateStdIn({
                 lineIndex: lineIndex,
@@ -77,7 +78,41 @@ export function PyProcessUI() {
             type: 'runsocket/send',
             payload: { type: "STDIN", "data": { "data": stdinValue, "pid": pyProcess?.pid } }
         });
+        setStdinValue("");
     }, [stdinValue, pyProcess]);
+
+    const inputKeyHandler = useCallback((e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+        switch (e.key) {
+            case "Enter":
+                handleStdInSend(index);
+                setHistoryIndex(-1);
+                break;
+            case "ArrowUp":
+                e.preventDefault();
+                if (historyIndex + 1 < inputHistory.length) {
+                    setHistoryIndex(prev => prev + 1);
+                }
+                break;
+            case "ArrowDown":
+                e.preventDefault();
+                if (historyIndex - 1 < 0) {
+                    setHistoryIndex(-1);
+                } else {
+                    setHistoryIndex(prev => prev - 1);
+                }
+                break;
+            default:
+                break;
+        }
+    }, [historyIndex, inputHistory, handleStdInSend]);
+
+    useEffect(() => {
+        if (historyIndex < 0) {
+            setStdinValue("");
+        } else {
+            setStdinValue(inputHistory[historyIndex]);
+        }
+    }, [historyIndex]);
 
     const isDisabled = runReadyState !== ReadyState.OPEN && pyProcess?.state !== PyProcessState.EXITED;
 
@@ -98,7 +133,7 @@ export function PyProcessUI() {
                             return <div key={idx} className="mb-4 text-xl">
                                 {linePrompt}
                                 <div className="flex">
-                                    <input onChange={handleStdInChange} onKeyUp={(e) => { if (e.key === 'Enter') { handleStdInSend(idx); } }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
+                                    <input onChange={handleStdInChange} onKeyDown={(e) => { inputKeyHandler(e, idx); }} value={stdinValue} autoFocus={true} type="text" className="input input-bordered bg-info grow"></input>
                                     <button onClick={() => handleStdInSend(idx)} className="btn btn-primary ml-4">Send</button>
                                 </div>
                             </div>

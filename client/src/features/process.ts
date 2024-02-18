@@ -5,14 +5,18 @@ import { StdIO, StdOut, StdOutGroup } from '../StdIOTypes';
 // StdOutGroups are handled internally for display only - we only want to accept StdOut
 type StdIOUpdate = Exclude<StdIO, StdOutGroup> | StdOut;
 
+const maxInputHistorySize = 100;
+
 export interface ProcessState {
     active: PyProcess | null;
     stdio: StdIO[];
+    inputHistory: string[];
 }
 
 const initialState: ProcessState = {
     active: null,
-    stdio: []
+    stdio: [],
+    inputHistory: []
 }
 
 const processSlice = createSlice({
@@ -67,6 +71,11 @@ const processSlice = createSlice({
             const line = state.stdio[lineIndex];
             if (line.type === 'stdin') {
                 line.response = stdinValue;
+
+                state.inputHistory.unshift(stdinValue);
+                if (state.inputHistory.length > maxInputHistorySize) {
+                    state.inputHistory.pop();
+                }
             } else {
                 throw new Error("Expected line === stdinLine");
             }
