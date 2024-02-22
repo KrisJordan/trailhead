@@ -125,7 +125,7 @@ def decompose_function(value: FunctionType) -> Function:
         parameters.append(
             Parameter(
                 name=name,
-                type=param.annotation.__name__
+                type=getattr(param.annotation, "__name__", str(param.annotation))
                 if param.annotation != inspect._empty
                 else "Any",
                 default_value=None
