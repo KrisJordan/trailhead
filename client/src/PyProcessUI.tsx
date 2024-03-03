@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { PyProcess, PyProcessState } from "./PyProcess";
 import { StdErrMessage } from "./StdErrMessage";
 import { StdOutGroupContainer } from "./StdOutGroupContainer";
