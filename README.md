@@ -4,11 +4,10 @@ This repository specifies the Docker image and Python requirements.txt for the C
 
 More on multi-architecture images: <https://www.docker.com/blog/multi-arch-build-and-images-the-simple-way/>
 
-Prior to building and pushing image, be sure to build the distribution of trailhead from devcontainer (TODO: make this one step):
+Prior to building and pushing image, be sure to build the distribution of trailhead from devcontainer using the `build-trailhead` script found in `bin`:
 
 ~~~bash
-cd client
-npm run build
+$ build-trailhead
 ~~~
 
 Command to build and push multi-arch image, replace `TAG` with the version:
