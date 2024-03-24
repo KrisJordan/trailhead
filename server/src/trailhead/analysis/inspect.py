@@ -1,8 +1,9 @@
 """Tools for analyzing Python code."""
+
 from _ast import AsyncFor
 import argparse
 import ast
-from typing import Any
+from typing import Any, Dict
 from pydantic import BaseModel
 
 
@@ -24,6 +25,7 @@ class Module(BaseModel):
     doc: str
     top_level_functions: list[Function]
     top_level_calls: list[str]
+    global_vars: Dict[str, Any]
 
 
 def main() -> None:
@@ -47,6 +49,7 @@ def analyze_module(file: str) -> Module:
                 doc=f"{type(e).__name__} encountered when parsing",
                 top_level_functions=[],
                 top_level_calls=[],
+                global_vars={},
             )
 
 
@@ -56,7 +59,36 @@ def get_module(path: str, tree: ast.Module) -> Module:
         doc=ast.get_docstring(tree) or "",
         top_level_functions=get_module_function_definitions(tree),
         top_level_calls=get_top_level_function_calls(tree),
+        global_vars=extract_global_vars(tree),
     )
+
+
+def extract_global_vars(tree: ast.Module) -> Dict[str, Any]:
+    assignment_nodes = []
+    for n in tree.body:
+        if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name):
+            assignment_nodes.append(n)
+        elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name):
+            assignment_nodes.append(n)
+
+    variable_dict = {}
+    for node in assignment_nodes:
+
+        if isinstance(node, ast.AnnAssign):
+            ref = node.target.id
+            value = node.value
+        elif isinstance(node, ast.Assign):
+            ref = node.targets[0].id
+            value = node.value
+
+        if isinstance(value, (ast.Constant, ast.List, ast.Tuple, ast.Dict)):
+            assignment_value = ast.literal_eval(value)
+        else:
+            assignment_value = None
+
+        variable_dict[ref] = assignment_value
+
+    return variable_dict
 
 
 def get_module_function_definitions(tree: ast.AST) -> list[Function]:

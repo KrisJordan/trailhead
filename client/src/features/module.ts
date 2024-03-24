@@ -92,6 +92,7 @@ export interface ModuleInfo {
     doc: string;
     top_level_functions: any[];
     top_level_calls: string[];
+    global_vars: { [key: string]: any };
 }
 
 export interface ModuleState {

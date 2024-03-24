@@ -1,11 +1,12 @@
 import { createBrowserRouter } from "react-router-dom";
 import { ModuleContext } from "./ModuleContext";
 import { ModuleRunner } from "./ModuleRunner";
-import { moduleLoader, runLoader, replLoader } from "./api/module";
+import { moduleLoader, runLoader, replLoader, guiLoader } from "./api/module";
 import { ModuleREPL } from "./ModuleREPL";
 import { ModuleIndex } from "./ModuleIndex";
 import { Home } from "./home/Home";
 import { HomeIndex } from "./home/HomeIndex";
+import { GraphicalUI } from "./GraphicalUI";
 
 
 
@@ -37,6 +38,11 @@ const router = createBrowserRouter([
                         path: "repl",
                         loader: replLoader,
                         element: <ModuleREPL />
+                    },
+                    {
+                        path: "gui",
+                        loader: guiLoader,
+                        element: <GraphicalUI />
                     }
                 ]
             }
