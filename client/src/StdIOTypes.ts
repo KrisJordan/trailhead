@@ -19,6 +19,7 @@ export type StdIn = {
 export type ExprEval = {
     type: 'expr_eval';
     value: PythonValue;
+    raw_value?: any;
 }
 
 export type StdOutGroup = {

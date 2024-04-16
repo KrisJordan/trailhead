@@ -3,11 +3,9 @@ import traceback
 import json
 import ast
 import inspect
-
-# from pydantic import BaseModel, RootModel, SerializeAsAny
+from pydantic import BaseModel, RootModel, SerializeAsAny
 from typing import Any
-
-# from types import FunctionType
+from types import FunctionType
 
 if len(sys.argv) < 2:
     raise Exception("The module name must be passed as first argument to this wrapper.")
@@ -15,145 +13,145 @@ if len(sys.argv) < 2:
 module_name = sys.argv[1]
 
 
-# def audit_hook(event: str, args: tuple[Any, ...]):
-#     if event == "builtins.input":
-#         sys.stdout.buffer.write(b"\xff\xff\xff\xff")
-#         sys.stdout.write(f"{len(args[0])}\n")
+def audit_hook(event: str, args: tuple[Any, ...]):
+    if event == "builtins.input":
+        sys.stdout.buffer.write(b"\xff\xff\xff\xff")
+        sys.stdout.write(f"{len(args[0])}\n")
 
 
-# sys.addaudithook(audit_hook)
+sys.addaudithook(audit_hook)
 
-# ValueList = RootModel[list[SerializeAsAny[BaseModel]]]
-# ValueDict = RootModel[dict[str, SerializeAsAny[BaseModel]]]
-
-
-# class NoneValue(BaseModel):
-#     type: str = "none"
+ValueList = RootModel[list[SerializeAsAny[BaseModel]]]
+ValueDict = RootModel[dict[str, SerializeAsAny[BaseModel]]]
 
 
-# class IntValue(BaseModel):
-#     type: str = "int"
-#     value: int
+class NoneValue(BaseModel):
+    type: str = "none"
 
 
-# class FloatValue(BaseModel):
-#     type: str = "float"
-#     value: float
+class IntValue(BaseModel):
+    type: str = "int"
+    value: int
 
 
-# class StringValue(BaseModel):
-#     type: str = "str"
-#     value: str
+class FloatValue(BaseModel):
+    type: str = "float"
+    value: float
 
 
-# class BoolValue(BaseModel):
-#     type: str = "bool"
-#     value: bool
+class StringValue(BaseModel):
+    type: str = "str"
+    value: str
 
 
-# class Parameter(BaseModel):
-#     name: str
-#     type: str
-#     default_value: Any | None
+class BoolValue(BaseModel):
+    type: str = "bool"
+    value: bool
 
 
-# class Function(BaseModel):
-#     type: str = "function"
-#     name: str
-#     doc: str
-#     parameters: list[Parameter]
-#     return_type: str
-#     source: str
+class Parameter(BaseModel):
+    name: str
+    type: str
+    default_value: Any | None
 
 
-# class ListValue(BaseModel):
-#     type: str = "list"
-#     items: list[SerializeAsAny[BaseModel]]
+class Function(BaseModel):
+    type: str = "function"
+    name: str
+    doc: str
+    parameters: list[Parameter]
+    return_type: str
+    source: str
 
 
-# class DictValue(BaseModel):
-#     type: str = "dict"
-#     keys: list[SerializeAsAny[BaseModel]]
-#     values: list[SerializeAsAny[BaseModel]]
+class ListValue(BaseModel):
+    type: str = "list"
+    items: list[SerializeAsAny[BaseModel]]
 
 
-# class UnknownValue(BaseModel):
-#     type: str = "unknown"
-#     python_type: str
-#     value: str
+class DictValue(BaseModel):
+    type: str = "dict"
+    keys: list[SerializeAsAny[BaseModel]]
+    values: list[SerializeAsAny[BaseModel]]
 
 
-# class Context(BaseModel):
-#     type: str = "context"
-#     values: dict[str, SerializeAsAny[BaseModel]]
+class UnknownValue(BaseModel):
+    type: str = "unknown"
+    python_type: str
+    value: str
 
 
-# def bundle_globals(kvs: dict[str, Any]) -> Context:
-#     filtered = {k: v for k, v in kvs.items() if not k.startswith("_")}
-#     results = {}
-#     for k, v in filtered.items():
-#         results[k] = decompose_value(v)
-#     return Context(values=results)
+class Context(BaseModel):
+    type: str = "context"
+    values: dict[str, SerializeAsAny[BaseModel]]
 
 
-# def decompose_value(value: Any) -> BaseModel:
-#     if isinstance(value, bool):
-#         return BoolValue(value=value)
-#     elif isinstance(value, int):
-#         return IntValue(value=value)
-#     elif isinstance(value, float):
-#         return FloatValue(value=value)
-#     elif isinstance(value, str):
-#         return StringValue(value=value)
-#     elif value is None:
-#         return NoneValue()
-#     elif isinstance(value, FunctionType):
-#         return decompose_function(value)
-#     elif isinstance(value, list):
-#         return ListValue(items=[decompose_value(v) for v in value])
-#     elif isinstance(value, dict):
-#         return DictValue(
-#             keys=[decompose_value(k) for k in value.keys()],
-#             values=[decompose_value(v) for v in value.values()],
-#         )
-#     else:
-#         return UnknownValue(python_type=type(value).__name__, value=repr(value))
+def bundle_globals(kvs: dict[str, Any]) -> Context:
+    filtered = {k: v for k, v in kvs.items() if not k.startswith("_")}
+    results = {}
+    for k, v in filtered.items():
+        results[k] = decompose_value(v)
+    return Context(values=results)
 
 
-# def decompose_function(value: FunctionType) -> Function:
-#     parameters = []
-#     signature = inspect.signature(value)
-#     for name, param in signature.parameters.items():
-#         parameters.append(
-#             Parameter(
-#                 name=name,
-#                 type=(
-#                     getattr(param.annotation, "__name__", str(param.annotation))
-#                     if param.annotation != inspect._empty
-#                     else "Any"
-#                 ),
-#                 default_value=(
-#                     None if param.default is inspect._empty else param.default
-#                 ),
-#             )
-#         )
-#     return Function(
-#         type="function",
-#         name=value.__name__,
-#         doc=value.__doc__ or "",
-#         parameters=parameters,
-#         return_type=getattr(
-#             signature.return_annotation, "__name__", str(signature.return_annotation)
-#         ),
-#         source=inspect.getsource(value),
-#     )
+def decompose_value(value: Any) -> BaseModel:
+    if isinstance(value, bool):
+        return BoolValue(value=value)
+    elif isinstance(value, int):
+        return IntValue(value=value)
+    elif isinstance(value, float):
+        return FloatValue(value=value)
+    elif isinstance(value, str):
+        return StringValue(value=value)
+    elif value is None:
+        return NoneValue()
+    elif isinstance(value, FunctionType):
+        return decompose_function(value)
+    elif isinstance(value, list):
+        return ListValue(items=[decompose_value(v) for v in value])
+    elif isinstance(value, dict):
+        return DictValue(
+            keys=[decompose_value(k) for k in value.keys()],
+            values=[decompose_value(v) for v in value.values()],
+        )
+    else:
+        return UnknownValue(python_type=type(value).__name__, value=repr(value))
 
 
-# def print_context(context: dict[str, Any]):
-#     filtered_globals = bundle_globals(context)
-#     sys.stderr.write(str(filtered_globals.model_dump_json()))
-#     sys.stderr.write("\n")
-#     sys.stderr.flush()
+def decompose_function(value: FunctionType) -> Function:
+    parameters = []
+    signature = inspect.signature(value)
+    for name, param in signature.parameters.items():
+        parameters.append(
+            Parameter(
+                name=name,
+                type=(
+                    getattr(param.annotation, "__name__", str(param.annotation))
+                    if param.annotation != inspect._empty
+                    else "Any"
+                ),
+                default_value=(
+                    None if param.default is inspect._empty else param.default
+                ),
+            )
+        )
+    return Function(
+        type="function",
+        name=value.__name__,
+        doc=value.__doc__ or "",
+        parameters=parameters,
+        return_type=getattr(
+            signature.return_annotation, "__name__", str(signature.return_annotation)
+        ),
+        source=inspect.getsource(value),
+    )
+
+
+def print_context(context: dict[str, Any]):
+    filtered_globals = bundle_globals(context)
+    sys.stderr.write(str(filtered_globals.model_dump_json()))
+    sys.stderr.write("\n")
+    sys.stderr.flush()
 
 
 def exec_callback(result: Any, globals: dict[str, Any], statement_ast: ast.Module):
@@ -164,7 +162,7 @@ def exec_callback(result: Any, globals: dict[str, Any], statement_ast: ast.Modul
 
     if result is not None:
         sys.stderr.write(
-            f'{{"type": "expr_eval", "value": {json.dumps(result, default=lambda o: o.__dict__)}}}'
+            f'{{"type": "expr_eval", "value": {decompose_value(result).model_dump_json()}, "raw_value": {json.dumps(result, default=lambda o: o.__dict__)}}}'
         )
         sys.stderr.write("\n")
         sys.stderr.flush()
