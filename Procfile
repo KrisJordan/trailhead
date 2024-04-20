@@ -8,3 +8,4 @@
 proxy: caddy run
 server: cd demo && trailhead --reload
 client: cd client && npm run dev
+compst: python3 -m http.server 2100 --directory compstagram

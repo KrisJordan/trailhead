@@ -1,0 +1,116 @@
+body {
+    background: black;
+    color: whitesmoke;
+    padding-top: 16px;
+    text-align: center;
+}
+
+#defaultImage {
+    width: 1;
+    height: 1;
+    visibility: hidden;
+    position: absolute;
+}
+
+h1 {
+    font-size: 32px;
+    letter-spacing: -2px;
+    font-style: italic;
+}
+
+h1 label {
+    letter-spacing: 0;
+    font-style: normal;
+    margin-left: 16px;
+}
+
+.container {
+    max-width: 530px;
+}
+
+canvas {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 1px;
+}
+
+.filters {
+    margin: -4px auto 0 auto;
+    max-width: 500px;
+}
+
+.filter {
+    text-align: left;
+    font-size: 0;
+    display: block;
+    padding: 8px 0;
+    border-bottom: 1px solid #111;
+}
+
+.filter .title {
+    display: inline-block;
+    font-size: 20px;
+    line-height: 20px;
+    vertical-align: middle;
+    height: 30px;
+    width: 30%;
+    margin: 0;
+    padding: 0;
+}
+
+.filter .title .amount {
+    font-weight: normal;
+    color: #666;
+    display: inline-block;
+    margin-left: 4px;
+}
+
+@media (max-width: 500px) {
+    .filter .title .amount {
+        display: none;
+    }
+}
+
+.filter .slider {
+    vertical-align: middle;
+    display: inline-block;
+    width: 60%;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+}
+
+.filter .slider .guide {
+    stroke-width: 3;
+    stroke: #222;
+    width: calc(100% - 20px);
+    height: 2px;
+}
+
+.filter .slider .handle {
+    cursor: pointer;
+    fill: white;
+    background: white;
+}
+
+.filter .btn {
+    float: right;
+    padding-top: -8px;
+}
+
+.actions {
+    margin: 0 auto;
+    padding: 15px 0;
+}
+
+.add-filter {
+    float: left;
+}
+
+.add-filter button {
+    margin-left: 8px;
+}
+
+.save a {
+    margin-left: 32px;
+}

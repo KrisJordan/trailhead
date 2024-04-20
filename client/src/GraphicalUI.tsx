@@ -71,7 +71,7 @@ export function GraphicalUI() {
     useEffect(() => {
         if (guiIframe === null) return;
 
-        guiIframe.src = guiIframe?.src;
+        guiIframe.src = guiIframe?.src
     }, [pyProcess]);
 
     useEffect(() => {
@@ -84,7 +84,7 @@ export function GraphicalUI() {
         {
             moduleInfo?.global_vars?.["__template__"] ? (
                 <>
-                    <iframe className="w-full h-[45vh] mb-4 border border-gray-300 rounded" src={moduleInfo?.global_vars?.["__template__"]} ref={handleIframe}></iframe>
+                    <iframe className="w-full h-[80vh] mb-4 border border-gray-300 rounded" src={moduleInfo?.global_vars?.["__template__"]} ref={handleIframe}></iframe>
                     <div className={`cursor-pointer collapse collapse-arrow max-h-[30vh] ${shouldShowData ? "collapse-open" : "collapse-close"}`} onClick={() => setShouldShowData(old => !old)}>
                         <div className="collapse-title">View Commands</div>
                         <div className="collapse-content overflow-scroll" ref={dataView}>

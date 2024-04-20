@@ -9,6 +9,8 @@ from fastapi import WebSocket
 
 from .web_socket_event import WebSocketEvent
 
+TEN_MEGABYTES: int = 10 * 1024 * 1024
+
 
 class AsyncPythonSubprocess:
     def __init__(
@@ -76,8 +78,8 @@ class AsyncPythonSubprocess:
         """Establish non-blocking readers on the subprocess' output and error sreams."""
         # Create StreamReader objects for stdout and stderr
         loop = asyncio.get_event_loop()
-        stdout_reader = asyncio.StreamReader()
-        stderr_reader = asyncio.StreamReader()
+        stdout_reader = asyncio.StreamReader(limit=TEN_MEGABYTES)
+        stderr_reader = asyncio.StreamReader(limit=TEN_MEGABYTES)
 
         # Create protocol-pipe pairs
         stdout_protocol = asyncio.StreamReaderProtocol(stdout_reader)
