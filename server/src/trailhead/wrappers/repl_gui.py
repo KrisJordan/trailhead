@@ -160,12 +160,11 @@ def exec_callback(result: Any, globals: dict[str, Any], statement_ast: ast.Modul
     # name of variable
     # print(ast.dump(statement_ast))
 
-    if result is not None:
-        sys.stderr.write(
-            f'{{"type": "expr_eval", "value": {decompose_value(result).model_dump_json()}, "raw_value": {json.dumps(result, default=lambda o: o.__dict__)}}}'
-        )
-        sys.stderr.write("\n")
-        sys.stderr.flush()
+    sys.stderr.write(
+        f'{{"type": "expr_eval", "value": {decompose_value(result).model_dump_json()}, "raw_value": {json.dumps(result, default=lambda o: o.__dict__)}}}'
+    )
+    sys.stderr.write("\n")
+    sys.stderr.flush()
 
 
 try:
