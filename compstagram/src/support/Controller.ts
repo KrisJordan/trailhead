@@ -33,6 +33,7 @@ export class Controller {
         this.update();
         let base64 = this.view.imageCanvas.canvas.toDataURL("image/png");
         executeCode<string>(`loadImage("${base64}")`).then((data) => {
+            console.log("Image loaded...");
             let image = new window.Image();
             image.onload = () => {
                 let ctx = this.view.imageCanvas.canvas.getContext("2d");
