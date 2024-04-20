@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./app/store";
 import { ExprEval, StdIO } from "./StdIOTypes";
-import { PyProcess } from "./PyProcess";
+import { PyProcess, PyProcessState } from "./PyProcess";
 import { ModuleInfo } from "./features/module";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StdOutGroupContainer } from "./StdOutGroupContainer";
@@ -71,7 +71,16 @@ export function GraphicalUI() {
     useEffect(() => {
         if (guiIframe === null) return;
 
-        guiIframe.src = guiIframe?.src;
+        if (pyProcess?.state === PyProcessState.RUNNING) {
+            guiIframe.src = guiIframe?.src;
+
+            setMessageHistory([]);
+
+            guiIframe.contentWindow?.postMessage({
+                source: "gui-template-parent",
+                payload: "ready"
+            }, "*");
+        }
     }, [pyProcess]);
 
     useEffect(() => {
