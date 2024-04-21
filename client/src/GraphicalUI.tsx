@@ -6,8 +6,6 @@ import { ModuleInfo } from "./features/module";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StdOutGroupContainer } from "./StdOutGroupContainer";
 import { StdErrMessage } from "./StdErrMessage";
-import { Icon } from "@iconify/react/dist/iconify.js";
-import { valueToInlineJSX } from "./context/helpers";
 
 interface FunctionCall {
     type: 'function_call';
@@ -21,6 +19,7 @@ export function GraphicalUI() {
     const moduleInfo = useSelector<RootState, ModuleInfo | null>((state) => state.module.info);
     const [guiIframe, setGuiIframe] = useState<HTMLIFrameElement | null>(null);
     const filteredStdio = useSelector<RootState, ExprEval[]>((state) => state.process.stdio.filter(line => line.type === "expr_eval") as ExprEval[]);
+    const stdio = useSelector<RootState, StdIO[]>((state) => state.process.stdio);
     const prevStdioLength = useRef<number>(filteredStdio.length);
     const dispatch = useDispatch();
     const [messageHistory, setMessageHistory] = useState<MessageHistory[]>([]);
@@ -91,23 +90,14 @@ export function GraphicalUI() {
                 <>
                     <iframe className="w-full h-[80vh] mb-4 border border-gray-300 rounded" src={moduleInfo?.global_vars?.["__template__"]} ref={handleIframe}></iframe>
                     <div className={`cursor-pointer collapse collapse-arrow max-h-[30vh] ${shouldShowData ? "collapse-open" : "collapse-close"}`} onClick={() => setShouldShowData(old => !old)}>
-                        <div className="collapse-title">View Commands</div>
+                        <div className="collapse-title">View Printed Output</div>
                         <div className="collapse-content overflow-scroll" ref={dataView}>
-                            {messageHistory.map((line, idx) => {
+                            {stdio.map((line, idx) => {
                                 switch (line.type) {
                                     case 'stderr':
                                         return <StdErrMessage key={idx} line={line.line} />;
                                     case 'stdout_group':
                                         return <StdOutGroupContainer key={idx} group={line} minGroupSize={100} groupAfterRatePerSecond={60} />
-                                    case 'expr_eval':
-                                        return <div key={idx} className="display-block p-2 rounded mb-4 bg-secondary text-white font-bold text-xl">
-                                            <Icon icon="mdi:lightning-bolt" className="inline icon-lg p-0.5 mr-2" width="24"></Icon>
-                                            <span className="font-mono">{valueToInlineJSX(line.value, "bg-neutral rounded text-lg m-0 p-0.5")}{line.value.type !== 'unknown' ? ` (${line.value.type})` : null}</span>
-                                        </div>;
-                                    case 'function_call':
-                                        return <div key={idx}>
-                                            <input value={line.value} disabled type="text" className="mb-4 input input-bordered bg-info grow  font-mono font-bold text-xl w-full" />
-                                        </div>;
                                 }
                             })}
                         </div>

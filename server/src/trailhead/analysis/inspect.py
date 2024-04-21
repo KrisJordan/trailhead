@@ -81,8 +81,15 @@ def extract_global_vars(tree: ast.Module) -> Dict[str, Any]:
             ref = node.targets[0].id
             value = node.value
 
-        if isinstance(value, (ast.Constant, ast.List, ast.Tuple, ast.Dict)):
+        if isinstance(value, (ast.Constant, ast.List, ast.Tuple)):
             assignment_value = ast.literal_eval(value)
+        elif isinstance(value, ast.Dict):
+            assignment_value = {}
+            for key, val in zip(value.keys, value.values):
+                if isinstance(val, (ast.Constant, ast.List, ast.Tuple, ast.Dict)):
+                    assignment_value[ast.literal_eval(key)] = ast.literal_eval(val)
+                else:
+                    assignment_value[ast.literal_eval(key)] = str(val)
         else:
             assignment_value = None
 

@@ -30,11 +30,19 @@ export class Controller {
 
     private loadImage(image: Image): void {
         this.model.image = image;
-        this.update();
-        let base64 = this.view.imageCanvas.canvas.toDataURL("image/png");
-        executeCode<string>(`loadImage("${base64}")`).then((data) => {
-            console.log("Image loaded...");
-            let image = new window.Image();
+        let base64 = this.loader.canvas.toDataURL("image/png");
+
+        type Filter = { filter: string, amount: number };
+        let filters: Filter[] = [{ "filter": "Invert", "amount": 1.0 }];
+        let payload = {
+            "filters": filters,
+            "image": base64,
+        };
+
+        executeCode<string>(`main('${JSON.stringify(payload)}')`).then((data) => {
+            let image = document.createElement("img");
+            image.width = this.loader.img.width;
+            image.height = this.loader.img.height;
             image.onload = () => {
                 let ctx = this.view.imageCanvas.canvas.getContext("2d");
                 ctx.clearRect(0, 0, image.width, image.height);
