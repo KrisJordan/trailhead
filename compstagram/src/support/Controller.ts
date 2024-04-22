@@ -19,10 +19,10 @@ export class Controller {
     }
 
     private initEventHandlers(): void {
+        this.loadFilters();
         this.loader = new ImageLoader(this.view.imageSelect, this.view.imgWidth(), this.view.imgWidth());
         this.loader.onload = this.loadImage.bind(this);
         this.loader.img.src = this.view.defaultImage;
-        this.view.filterSelect.addObserver(this.addFilter.bind(this));
         this.view.onfilterchange = this.update.bind(this);
         this.view.onremovefilter = this.removeFilter.bind(this);
         this.view.save.addEventListener("click", this.save.bind(this));
@@ -30,15 +30,32 @@ export class Controller {
 
     private loadImage(image: Image): void {
         this.model.image = image;
-        let base64 = this.loader.canvas.toDataURL("image/png");
+        this.model.image64 = this.loader.canvas.toDataURL("image/png");
+        this.process();
+    }
 
+    private loadFilters(): void {
+        type FilterSettings = { name: string, amount: number };
+        executeCode<FilterSettings[]>(`get_filter_types()`).then(value => {
+            let availableFilters = value.map((settings) => {
+                let filter = new Filter();
+                filter.name = settings.name;
+                filter.amount = settings.amount;
+                return filter;
+            });
+            this.model.availableFilters = availableFilters;
+            this.view.updateFiltersSelect();
+            this.view.filterSelect.addObserver(this.addFilter.bind(this));
+        });
+    }
+
+    private process() {
         type Filter = { filter: string, amount: number };
         let filters: Filter[] = [{ "filter": "Invert", "amount": 1.0 }];
         let payload = {
             "filters": filters,
-            "image": base64,
+            "image": this.model.image64,
         };
-
         executeCode<string>(`main('${JSON.stringify(payload)}')`).then((data) => {
             let image = document.createElement("img");
             image.width = this.loader.img.width;

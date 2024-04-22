@@ -61,7 +61,7 @@ filter_types: dict[str, FilterClass] = {"Invert": InvertFilter}
 
 
 class FilterSettings(BaseModel):
-    filter: str
+    name: str
     amount: float
 
 
@@ -111,7 +111,7 @@ def main(job_json: JobRequestJson) -> Base64PNGImage:
     job = Job()
     job.filters = []
     for filter_spec in job_request.filters:
-        filter_class: FilterClass = filter_types[filter_spec.filter]
+        filter_class: FilterClass = filter_types[filter_spec.name]
         filter_instance: Filter = filter_class(filter_spec.amount)
         job.filters.append(filter_instance)
 
@@ -129,93 +129,5 @@ def main(job_json: JobRequestJson) -> Base64PNGImage:
     return to_image(job.run())
 
 
-def filter_choices() -> list[str]:
-    return [InvertFilter.name]
-
-
-# loaded_image = []
-
-# class FilterRequest:
-#     name: str
-#     amount: float
-
-
-# class Request:
-#     filters: list[FilterRequest]
-#     image: str
-
-
-# class DarkenFilter:
-#     label: str = "Darken"
-#     amount: float = 0.5
-
-#     def process(self, img: Image.Image) -> Image.Image: ...
-
-
-# class Color:
-#     red: int
-#     green: int
-#     blue: int
-
-#     def __init__(self, red: int, green: int, blue: int):
-#         self.red = red
-#         self.green = green
-#         self.blue = blue
-
-#     def copy(self) -> Self:
-#         return Color(self.red, self.green, self.blue)
-
-
-# # class Image:
-# #     pixels: list[list[Color]] = [[]]
-
-# #     def __init__(self):
-# #         self.pixels = []
-# #         for row in range(500):
-# #             row: list[Color] = []
-# #             for col in range(500):
-# #                 row.append(Color(0, 0, 0))
-# #             self.pixels.append(row)
-
-
-# def pixels_to_base64(img: Image.Image) -> str:
-#     # Save the image to a bytes buffer
-#     buffer: BytesIO = BytesIO()
-#     img.save(buffer, format="PNG")  # Using PNG to handle both RGB and RGBA
-#     buffer.seek(0)
-
-#     # Encode buffer to base64
-#     img_base64 = base64.b64encode(buffer.read())
-#     return "data:image/png;base64," + img_base64.decode("utf-8")
-
-
-# def loadImage(image_b64: str) -> str:
-#     _, encoded = image_b64.split(",", 1)
-#     binary_data = base64.b64decode(encoded)
-#     image_data = BytesIO(binary_data)
-#     img = Image.open(image_data).convert("RGB")
-#     # width, height = img.size
-#     # scaled_rgb_values = []
-#     # for y in range(height):
-#     #     row = []
-#     #     for x in range(width):
-#     #         row.append(img.getpixel((x, y)))
-#     #     scaled_rgb_values.append(row)
-#     # global loaded_image
-#     # loaded_image = scaled_rgb_values
-#     return pixels_to_base64(img)
-
-
-# def darkenImage() -> str:
-#     global loaded_image
-#     height = len(loaded_image)
-#     width = len(loaded_image[0])
-#     image = Image.new("RGB", (width, height))
-#     for y in range(height):
-#         for x in range(width):
-#             scaled_r, scaled_g, scaled_b = loaded_image[y][x]
-#             r = scaled_r - 50
-#             g = scaled_g - 50
-#             b = scaled_b - 50
-#             image.putpixel((x, y), (r, g, b))
-#     return pixels_to_base64(image)
+def get_filter_types() -> list[FilterSettings]:
+    return [FilterSettings(name="Invert", amount="1.0")]

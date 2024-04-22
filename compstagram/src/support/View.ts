@@ -30,7 +30,6 @@ export class View {
         this.filters = document.getElementById("filters")!;
         this.imageCanvas = new ImageCanvas(this.viewport);
         this.save = document.getElementById("save") as HTMLAnchorElement;
-        this.initFilterSelect();
     }
 
     updateFilters(): void {
@@ -68,10 +67,11 @@ export class View {
         }
     }
 
-    private initFilterSelect(): void {
+    updateFiltersSelect(): void {
         let select: HTMLSelectElement = document.getElementById("filterSelect") as HTMLSelectElement;
         let add: HTMLButtonElement = document.getElementById("filterAddButton") as HTMLButtonElement;
-        this.filterSelect = new FilterSelect(this.model.filterClasses, select, add);
+        this.filterSelect = new FilterSelect(this.model.availableFilters, select, add);
+        console.log(this.filterSelect);
     }
 
 }

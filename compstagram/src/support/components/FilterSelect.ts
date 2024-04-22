@@ -1,19 +1,17 @@
 import { Filter } from "../../Filter";
 import { Observer, Observable } from "./Observers";
 
-type FilterClass = typeof Filter;
-
 export class FilterSelect implements Observable<Filter> {
 
-    filters: FilterClass[];
+    filters: Filter[];
     names: string[];
     select: HTMLSelectElement;
     button: HTMLButtonElement;
     observers: Observer<Filter>[] = [];
 
-    constructor(filters: FilterClass[], select: HTMLSelectElement, button: HTMLButtonElement) {
+    constructor(filters: Filter[], select: HTMLSelectElement, button: HTMLButtonElement) {
         this.filters = filters;
-        this.names = filters.map( (f: FilterClass): string => (new f()).name );
+        this.names = filters.map((f: Filter): string => f.name);
         this.select = select;
         this.button = button;
 
@@ -30,8 +28,12 @@ export class FilterSelect implements Observable<Filter> {
             // Nothing is selected.
             return;
         }
-        
-        let filter: Filter = new this.filters[parseInt(this.select.value, 10)]();
+
+        // Clone the filter settings...
+        let filterSettings: Filter = this.filters[parseInt(this.select.value, 10)];
+        let filter: Filter = new Filter();
+        filter.name = filterSettings.name;
+        filter.amount = filterSettings.amount;
         this.observers.forEach((o: Observer<Filter>) => {
             o(filter);
         });
@@ -43,13 +45,13 @@ export class FilterSelect implements Observable<Filter> {
 
     private initOptions(): void {
         this.names
-        .map((name: string, index: number): HTMLOptionElement => {
-            let option: HTMLOptionElement = document.createElement("option");
-            option.innerText = name;
-            option.value = String(index);
-            return option;
-        })
-        .forEach((option: HTMLOptionElement) => this.select.appendChild(option));
+            .map((name: string, index: number): HTMLOptionElement => {
+                let option: HTMLOptionElement = document.createElement("option");
+                option.innerText = name;
+                option.value = String(index);
+                return option;
+            })
+            .forEach((option: HTMLOptionElement) => this.select.appendChild(option));
     }
 
 }

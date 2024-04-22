@@ -15,15 +15,15 @@ let main = async () => {
 
     let model = new Model();
 
-    // TODO: As you work begin work on each filter, comment it out.
-    model.filterClasses = [
-        // SaturationFilter,
-        // ContrastFilter,
-        // ColorizeFilter,
-        // BrightnessFilter,
-        // BorderFilter,
-        InvertFilter
-    ];
+    // // TODO: As you work begin work on each filter, comment it out.
+    // model.filterClasses = [
+    //     // SaturationFilter,
+    //     // ContrastFilter,
+    //     // ColorizeFilter,
+    //     // BrightnessFilter,
+    //     // BorderFilter,
+    //     InvertFilter
+    // ];
 
     let view = new View(model);
     let controller = new Controller(model, view);
