@@ -4,7 +4,6 @@ import { FilterClass } from "./FilterClass";
 
 export class Model {
 
-    image: Image;
     image64: string;
     filterClasses: FilterClass[] = [];
     availableFilters: Filter[] = [];

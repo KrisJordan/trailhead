@@ -130,4 +130,5 @@ def main(job_json: JobRequestJson) -> Base64PNGImage:
 
 
 def get_filter_types() -> list[FilterSettings]:
+    """Produces a list of default FilterSettings users can choose from."""
     return [FilterSettings(name="Invert", amount="1.0")]

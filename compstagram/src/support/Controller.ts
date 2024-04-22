@@ -28,12 +28,6 @@ export class Controller {
         this.view.save.addEventListener("click", this.save.bind(this));
     }
 
-    private loadImage(image: Image): void {
-        this.model.image = image;
-        this.model.image64 = this.loader.canvas.toDataURL("image/png");
-        this.process();
-    }
-
     private loadFilters(): void {
         type FilterSettings = { name: string, amount: number };
         executeCode<FilterSettings[]>(`get_filter_types()`).then(value => {
@@ -49,24 +43,36 @@ export class Controller {
         });
     }
 
+    private loadImage(image64: string): void {
+        console.log(image64);
+        this.model.image64 = image64;
+        this.process();
+    }
+
     private process() {
-        type Filter = { filter: string, amount: number };
-        let filters: Filter[] = [{ "filter": "Invert", "amount": 1.0 }];
+        console.log("PROCESSING");
+        type Filter = { name: string, amount: number };
         let payload = {
-            "filters": filters,
-            "image": this.model.image64,
+            "filters": this.model.filters,
+            "image": this.model.image64
         };
         executeCode<string>(`main('${JSON.stringify(payload)}')`).then((data) => {
+            console.log("Processing data...");
+            console.log(data);
             let image = document.createElement("img");
-            image.width = this.loader.img.width;
-            image.height = this.loader.img.height;
+            // image.width = this.loader.img.width;
+            // image.height = this.loader.img.height;
             image.onload = () => {
                 let ctx = this.view.imageCanvas.canvas.getContext("2d");
                 ctx.clearRect(0, 0, image.width, image.height);
                 ctx.drawImage(image, 0, 0);
             };
             image.src = data;
+            console.log("<<< Filter response...");
+            console.log(payload.filters);
         });
+        console.log(">>> Filter request...");
+        console.log(payload.filters);
     }
 
     private addFilter(filter: Filter): void {
@@ -83,8 +89,8 @@ export class Controller {
     }
 
     private update(): void {
-        if (this.model.image !== undefined) {
-            this.view.imageCanvas.update(this.model.process(this.model.image));
+        if (this.model.image64 !== undefined) {
+            this.process();
         }
     }
 
