@@ -1,4 +1,4 @@
-import module, { ModuleInfo, clearModule, setModule } from "../features/module";
+import { ModuleInfo, clearModule, setModule } from "../features/module";
 import store from "../app/store";
 import router from "../routes";
 
