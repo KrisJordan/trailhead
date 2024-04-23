@@ -71,7 +71,6 @@ export class View {
         let select: HTMLSelectElement = document.getElementById("filterSelect") as HTMLSelectElement;
         let add: HTMLButtonElement = document.getElementById("filterAddButton") as HTMLButtonElement;
         this.filterSelect = new FilterSelect(this.model.availableFilters, select, add);
-        console.log(this.filterSelect);
     }
 
 }

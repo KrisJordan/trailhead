@@ -40,7 +40,6 @@ export class ImageLoader {
         loadImage(
             file,
             (img: HTMLImageElement): void => {
-                console.log("LOADING IMAGE");
                 this.img = img;
                 this.loadImage();
             },
@@ -52,7 +51,6 @@ export class ImageLoader {
     }
 
     createImage(): void {
-        console.log("CREATE IMAGE");
         this.img.src = this.reader.result as string;
     }
 
@@ -69,18 +67,8 @@ export class ImageLoader {
         }
         let ctx: CanvasRenderingContext2D = this.canvas.getContext("2d") as CanvasRenderingContext2D;
         ctx.drawImage(this.img, srcX, srcY, constraint, constraint, 0, 0, this.canvas.width, this.canvas.height);
-        // let raw: ImageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        // let image: Image = new Image(this.canvas.width, this.canvas.height);
-        // for (let i: number = 0; i < raw.data.length; i += 4) {
-        //     let row: number = Math.floor(i / 4 / raw.width);
-        //     let col: number = i / 4 % raw.width;
-        //     let red: number = raw.data[i] / 255;
-        //     let green: number = raw.data[i + 1] / 255;
-        //     let blue: number = raw.data[i + 2] / 255;
-        //     image.pixels[row][col] = new Color(red, green, blue);
-        // }
         if (this.onload !== undefined) {
-            this.onload(this.canvas.toDataURL("image/png"));//image);
+            this.onload(this.canvas.toDataURL("image/png"));
         }
     }
 }

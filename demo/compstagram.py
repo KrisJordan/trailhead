@@ -5,7 +5,7 @@ __template__ = "http://localhost:2100"
 import base64
 from io import BytesIO
 from PIL import Image
-from typing import Protocol
+from typing import Protocol, Self
 from pydantic import BaseModel
 
 
@@ -23,9 +23,15 @@ class Color:
         self.green = g
         self.blue = b
 
+    def copy(self) -> Self:
+        return Color(self.red, self.green, self.blue)
+
 
 class Bitmap:
-    pixels: list[list[Color]] = []
+    pixels: list[list[Color]]
+
+    def __init__(self):
+        self.pixels = []
 
 
 class Filter(Protocol):
@@ -43,7 +49,8 @@ class InvertFilter:
     name: str = "Invert"
     amount: float
 
-    def __init__(self, amount: float): ...
+    def __init__(self, amount: float):
+        self.amount = amount
 
     def apply(self, bitmap: Bitmap) -> Bitmap:
         height: int = len(bitmap.pixels)
@@ -51,13 +58,46 @@ class InvertFilter:
         for y in range(height):
             for x in range(width):
                 pixel = bitmap.pixels[y][x]
-                pixel.red = 255 - pixel.red
-                pixel.green = 255 - pixel.green
-                pixel.blue = 255 - pixel.blue
+                red_inverted = 255 - pixel.red
+                green_inverted = 255 - pixel.green
+                blue_inverted = 255 - pixel.blue
+                red_delta = int((red_inverted - pixel.red) * self.amount)
+                green_delta = int((green_inverted - pixel.green) * self.amount)
+                blue_delta = int((blue_inverted - pixel.blue) * self.amount)
+                pixel.red += red_delta
+                pixel.green += green_delta
+                pixel.blue += blue_delta
+
         return bitmap
 
 
-filter_types: dict[str, FilterClass] = {"Invert": InvertFilter}
+class BorderFilter:
+    name: str = "Border"
+    amount: float
+    color: Color
+
+    def __init__(self, amount: float):
+        self.amount = amount
+        self.color = Color(75, 156, 211)
+
+    def apply(self, bitmap: Bitmap) -> Bitmap:
+        height: int = len(bitmap.pixels)
+        width: int = len(bitmap.pixels[0])
+        thickness = int(width / 2 * self.amount)
+        for x in range(thickness):
+            for y in range(height):
+                bitmap.pixels[y][x] = self.color.copy()
+                bitmap.pixels[y][width - x - 1] = self.color.copy()
+
+        for y in range(thickness):
+            for x in range(width):
+                bitmap.pixels[y][x] = self.color.copy()
+                bitmap.pixels[height - y - 1][x] = self.color.copy()
+
+        return bitmap
+
+
+filter_types: dict[str, FilterClass] = {"Invert": InvertFilter, "Border": BorderFilter}
 
 
 class FilterSettings(BaseModel):
@@ -92,7 +132,7 @@ def to_image(bitmap: Bitmap) -> str:
     # Convert to PIL Image
     height = len(bitmap.pixels)
     width = len(bitmap.pixels[0])
-    image = Image.new("RGB", (width, height))
+    image = Image.new("RGB", (width, height), "green")
     for y in range(height):
         for x in range(width):
             pixel = bitmap.pixels[y][x]
@@ -107,7 +147,6 @@ def to_image(bitmap: Bitmap) -> str:
 
 def main(job_json: JobRequestJson) -> Base64PNGImage:
     job_request = JobRequest.model_validate_json(job_json)
-    print(job_request.filters)
     job = Job()
     job.filters = []
     for filter_spec in job_request.filters:
@@ -131,4 +170,7 @@ def main(job_json: JobRequestJson) -> Base64PNGImage:
 
 def get_filter_types() -> list[FilterSettings]:
     """Produces a list of default FilterSettings users can choose from."""
-    return [FilterSettings(name="Invert", amount="1.0")]
+    return [
+        FilterSettings(name="Invert", amount="1.0"),
+        FilterSettings(name="Border", amount="0.1"),
+    ]

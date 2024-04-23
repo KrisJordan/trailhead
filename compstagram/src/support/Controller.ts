@@ -2,7 +2,6 @@ import { Model } from "./Model";
 import { View } from "./View";
 import { Filter } from "../Filter";
 import { ImageLoader } from "./ImageLoader";
-import { Image } from "../Image";
 import { executeCode } from "./bridge";
 
 export class Controller {
@@ -44,21 +43,17 @@ export class Controller {
     }
 
     private loadImage(image64: string): void {
-        console.log(image64);
         this.model.image64 = image64;
         this.process();
     }
 
     private process() {
-        console.log("PROCESSING");
         type Filter = { name: string, amount: number };
         let payload = {
             "filters": this.model.filters,
             "image": this.model.image64
         };
         executeCode<string>(`main('${JSON.stringify(payload)}')`).then((data) => {
-            console.log("Processing data...");
-            console.log(data);
             let image = document.createElement("img");
             // image.width = this.loader.img.width;
             // image.height = this.loader.img.height;
@@ -68,11 +63,7 @@ export class Controller {
                 ctx.drawImage(image, 0, 0);
             };
             image.src = data;
-            console.log("<<< Filter response...");
-            console.log(payload.filters);
         });
-        console.log(">>> Filter request...");
-        console.log(payload.filters);
     }
 
     private addFilter(filter: Filter): void {
