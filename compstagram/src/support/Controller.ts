@@ -53,10 +53,10 @@ export class Controller {
             "filters": this.model.filters,
             "image": this.model.image64
         };
-        executeCode<string>(`main('${JSON.stringify(payload)}')`).then((data) => {
+        let filters = this.model.filters.map((filter) => filter.name + "(amount=" + filter.amount + ")")
+        let payloadPython = 'main(Request(image="' + this.model.image64 + '", filters=[' + filters.join(", ") + ']))';
+        executeCode<string>(payloadPython).then((data) => {
             let image = document.createElement("img");
-            // image.width = this.loader.img.width;
-            // image.height = this.loader.img.height;
             image.onload = () => {
                 let ctx = this.view.imageCanvas.canvas.getContext("2d");
                 ctx.clearRect(0, 0, image.width, image.height);
