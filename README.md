@@ -13,7 +13,7 @@ $ build-trailhead
 Command to build and push multi-arch image, replace `TAG` with the version:
 
 ~~~bash
-export TAG=0.1.12
+export TAG=0.2.0
 docker buildx build \
     --push \
     --platform linux/arm64,linux/amd64 \
