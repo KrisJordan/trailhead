@@ -160,14 +160,11 @@ def exec_callback(result: Any, globals: dict[str, Any], statement_ast: ast.Modul
     # name of variable
     # print(ast.dump(statement_ast))
 
-    if result is not None:
-        sys.stderr.write(
-            f'{{"type": "expr_eval", "value": {decompose_value(result).model_dump_json()}}}'
-        )
-        sys.stderr.write("\n")
-        sys.stderr.flush()
-
-    print_context(globals)
+    sys.stderr.write(
+        f'{{"type": "expr_eval", "value": {decompose_value(result).model_dump_json()}, "raw_value": {json.dumps(result, default=lambda o: o.__dict__)}}}'
+    )
+    sys.stderr.write("\n")
+    sys.stderr.flush()
 
 
 try:
@@ -175,9 +172,8 @@ try:
     from .interact.repl import InteractiveConsole
 
     module = importlib.import_module(module_name)
-    local_scope = vars(module)
+    local_scope = vars(module).copy()
     console = InteractiveConsole(locals=local_scope, exec_callback=exec_callback)
-    print_context(local_scope)
     console.interact(banner="")
 
 except Exception as e:
@@ -208,6 +204,24 @@ except Exception as e:
             try:
                 json.dumps(value)
                 locals[local] = value
+                # except (TypeError, OverflowError):
+                #     try:
+                #         value_type = type(value)
+
+                #             attributes = [
+                #                 attr for attr in dir(value) if not attr.startswith("_")
+                #             ]
+                #             simple_object: dict[str, Any] = {}
+
+                #             for attr in attributes:
+                #                 simple_object[attr] = getattr(value, attr)
+
+                #             locals[local] = {
+                #                 "type": type(value).__name__,
+                #                 "repr": attributes,
+                #             }
+                #         else:
+                #             locals[local] = repr(value)
             except (TypeError, OverflowError):
                 locals[local] = "[See value in Debugger]"
                 continue

@@ -79,7 +79,7 @@ export const runsocketMiddlewareFactory = () => {
                                     }
 
                                     if (parsed.type && parsed.type === 'expr_eval') {
-                                        dispatch(appendStdIO({ type: 'expr_eval', value: parsed.value }))
+                                        dispatch(appendStdIO({ type: 'expr_eval', value: parsed.value, raw_value: parsed.raw_value }))
                                         return
                                     }
                                 } catch (e) { /* No op */ }

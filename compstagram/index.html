@@ -1,0 +1,44 @@
+<!-- You should not modify this HTML file for the purposes of this project. -->
+
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>Compstagram</title>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb"
+    crossorigin="anonymous">
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>
+      COMPSTAGRAM
+      <label class="btn btn-dark btn-sm">
+        Image
+        <input id="imageSelect" type="file" style="display: none">
+      </label>
+    </h1>
+    <canvas id="viewport"></canvas>
+    <div id="filters" class="filters"></div>
+    <div class="actions row form-inline">
+      <div class="form-group">
+        <select id="filterSelect" class="form-control"></select>
+      </div>
+      <div class="add-filter form-group">
+        <button id="filterAddButton" class="btn btn-dark">Add Filter</button>
+      </div>
+      <div class="save form-group">
+        <a id="save" class="btn btn-success" href="">Save</a>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-load-image/2.17.1/load-image.all.min.js"></script>
+  <script src="./dist/bundle.js?id=3"></script>
+</body>
+
+</html>

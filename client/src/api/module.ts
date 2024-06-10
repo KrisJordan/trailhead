@@ -24,6 +24,17 @@ export const replLoader = async ({ params }: any) => {
     return null;
 };
 
+export const guiLoader = async ({ params }: any) => {
+    store.dispatch({
+        type: "runsocket/connect",
+        payload: {
+            module: params.moduleName,
+            endpoint: `/ws/${params.moduleName}/repl_gui`
+        }
+    });
+    return null;
+}
+
 export const moduleLoader = async ({ params, request }: any) => {
     if (params.moduleName) {
         // Load the module info
@@ -48,7 +59,9 @@ export const moduleLoader = async ({ params, request }: any) => {
         const windowLocation = window.location.protocol + "//" + window.location.host;
         const requestUrl = decodeURIComponent(request.url.replace(windowLocation, ""));
         if (target === requestUrl) {
-            if (moduleInfo.top_level_calls && moduleInfo.top_level_calls.length > 0) {
+            if (moduleInfo.global_vars?.["__template__"]) {
+                target += "/gui";
+            } else if (moduleInfo.top_level_calls && moduleInfo.top_level_calls.length > 0) {
                 target += "/run";
             } else if (moduleInfo.top_level_functions && moduleInfo.top_level_functions.length > 0) {
                 target += "/repl";

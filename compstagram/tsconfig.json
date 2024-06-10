@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist", // Output directory for JavaScript files
+        "noImplicitAny": true,
+        "module": "commonjs",
+        "target": "es6", // Specify ECMAScript target version
+        "sourceMap": true // Generate source maps
+    },
+    "include": [
+        "./src/**/*" // Include all files in the src directory
+    ]
+}
