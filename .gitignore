@@ -1,6 +1,16 @@
 **/__pycache__
 **/node_modules
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+.trailhead-build-*/
 .git
 dist/**
 .DS_Store
+Thumbs.db
 server/src/trailhead/static/**

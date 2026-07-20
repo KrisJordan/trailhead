@@ -1,4 +1,7 @@
-// Converts '/' based file path to '.' based python module path
+// Converts POSIX and Windows file paths to a dotted Python module path.
 export function parseModuleFromFile(filePath: string) {
-    return filePath.replace(/^\.\//, '').replace(/\//g, '.').replace('.py', '');
+    return filePath
+        .replace(/^\.[\\/]/, '')
+        .replace(/[\\/]/g, '.')
+        .replace(/\.py$/, '');
 }

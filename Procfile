@@ -1,11 +1,6 @@
-# Run all development servers via a process manager like `honcho`
-# 
-# Start all subprocesses with `honcho start`
-# Stop with Ctrl+C
-#
-# For more information, see: https://honcho.readthedocs.io/en/latest/index.html#what-are-procfiles
+# Optional process-manager entrypoint. The recommended cross-platform command is
+# `python scripts/dev.py`, which also manages child-process shutdown on Windows.
+# If Honcho is already installed, `honcho start` runs the same two core services.
 
-proxy: caddy run
-server: cd demo && trailhead --reload
-client: cd client && npm run dev
-compst: python3 -m http.server 2100 --directory turtle
+server: trailhead --reload --root demo --host 127.0.0.1 --port 1109
+client: npm run dev --prefix client

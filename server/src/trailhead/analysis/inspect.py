@@ -3,6 +3,7 @@
 from _ast import AsyncFor
 import argparse
 import ast
+import tokenize
 from typing import Any, Dict
 from pydantic import BaseModel
 
@@ -33,15 +34,16 @@ def main() -> None:
     parser.add_argument("filepath", help="The Python file to analyze")
     args = parser.parse_args()
     file = args.filepath
-    tree = ast.parse(open(file).read())
+    with tokenize.open(file) as source:
+        tree = ast.parse(source.read())
     module = get_module(file, tree)
     print(module)
 
 
 def analyze_module(file: str) -> Module:
-    with open(file) as f:
+    with tokenize.open(file) as source:
         try:
-            tree = ast.parse(f.read())
+            tree = ast.parse(source.read())
             return get_module(file, tree)
         except Exception as e:
             return Module(
@@ -64,7 +66,7 @@ def get_module(path: str, tree: ast.Module) -> Module:
 
 
 def extract_global_vars(tree: ast.Module) -> Dict[str, Any]:
-    assignment_nodes = []
+    assignment_nodes: list[ast.Assign | ast.AnnAssign] = []
     for n in tree.body:
         if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name):
             assignment_nodes.append(n)
@@ -75,10 +77,15 @@ def extract_global_vars(tree: ast.Module) -> Dict[str, Any]:
     for node in assignment_nodes:
 
         if isinstance(node, ast.AnnAssign):
+            if not isinstance(node.target, ast.Name):
+                continue
             ref = node.target.id
             value = node.value
-        elif isinstance(node, ast.Assign):
-            ref = node.targets[0].id
+        else:
+            target = node.targets[0]
+            if not isinstance(target, ast.Name):
+                continue
+            ref = target.id
             value = node.value
 
         if isinstance(value, (ast.Constant, ast.List, ast.Tuple)):
@@ -86,6 +93,8 @@ def extract_global_vars(tree: ast.Module) -> Dict[str, Any]:
         elif isinstance(value, ast.Dict):
             assignment_value = {}
             for key, val in zip(value.keys, value.values):
+                if key is None:
+                    continue
                 if isinstance(val, (ast.Constant, ast.List, ast.Tuple, ast.Dict)):
                     assignment_value[ast.literal_eval(key)] = ast.literal_eval(val)
                 else:

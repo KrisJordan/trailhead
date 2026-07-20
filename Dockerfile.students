@@ -1,5 +1,5 @@
 ARG ARCH=
-FROM ${ARCH}ubuntu:22.04 as packages
+FROM ${ARCH}ubuntu:22.04 AS packages
 
 # Setup workspace directory
 RUN mkdir /workspace
@@ -58,19 +58,19 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 # Configure zsh
 USER $USERNAME
-ENV HOME /home/$USERNAME
+ENV HOME=/home/$USERNAME
+ENV PATH="/home/$USERNAME/.local/bin:${PATH}"
 
 # Install Python requirements.txt
 COPY server/requirements.txt /workspace/requirements.txt
 WORKDIR /workspace
-RUN echo 'export PYTHONPATH=/workspace' >>~/.zshrc && \
-    python3 -m pip install --user -r requirements.txt && \
+RUN python3 -m pip install --user -r requirements.txt && \
     python3 -m pip cache purge
 
 
 # === Stage 2 ===
 # Restart with more minimal setup
-FROM ${ARCH}python:3.12-slim-bookworm as target
+FROM ${ARCH}python:3.12-slim-bookworm AS target
 
 # Setup workspace directory
 RUN mkdir /workspace
@@ -119,7 +119,8 @@ RUN ln -s /usr/local/bin/python3 /usr/bin/python3
 
 # Configure zsh
 USER $USERNAME
-ENV HOME /home/$USERNAME
+ENV HOME=/home/$USERNAME
+ENV PATH="/home/$USERNAME/.local/bin:${PATH}"
 
 # Add zsh theme with niceties
 RUN curl https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash - \
@@ -128,11 +129,6 @@ RUN curl https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.
 
 # Copy in built Python Packages
 COPY --from=packages /home/${USERNAME}/.local /home/${USERNAME}/.local
-COPY server/requirements.txt /tmp/requirements.txt
-WORKDIR /tmp
-RUN python3 -m pip install --user -r requirements.txt && \
-    pip install --upgrade pip && \
-    python3 -m pip cache purge
 
 # Install Trailhead (until an official PyPI package)
 COPY bin/trailhead /home/$USERNAME/.local/bin/trailhead

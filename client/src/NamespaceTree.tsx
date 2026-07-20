@@ -4,6 +4,7 @@ import { RootState } from './app/store';
 import { FilesState } from './features/files';
 import { ReadyState } from './utils/Socket';
 import { NavLink } from 'react-router-dom';
+import { parseModuleFromFile } from './utils/ModuleTools';
 
 export interface Tree {
     ns_type: 'tree';
@@ -37,15 +38,15 @@ function NamespaceTree() {
                 payload: { type: "LS", data: { path: "/" } }
             });
         }
-    }, [readyState]);
+    }, [dispatch, readyState]);
 
-    let buildTree = (tree: { children: (Module | Package)[] }) => {
-        let children = [];
-        for (let item of tree.children) {
+    const buildTree = (tree: { children: (Module | Package)[] }) => {
+        const children = [];
+        for (const item of tree.children) {
             switch (item.ns_type) {
                 case 'module':
                     children.push(<li key={item.full_path + item.name}>
-                        <NavLink to={"./module/" + encodeURIComponent(item.full_path.substring(2).replaceAll("\/", ".").replace(".py", ""))} className="w-full grid grid-cols-4 hover:bg-neutral-100">
+                        <NavLink to={"./module/" + encodeURIComponent(parseModuleFromFile(item.full_path))} className="w-full grid grid-cols-4 hover:bg-neutral-100">
                             <span className="col-span-1">{item.name.replace(".py", "")}</span>
                             <span className="text-neutral-400 font-light italic col-span-3 overflow-hidden text-ellipsis text-nowrap">{item.docstring}</span>
                         </NavLink>

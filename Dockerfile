@@ -17,7 +17,6 @@ RUN apt-get update \
         debian-archive-keyring \
         git \
         gnupg \
-        # libatomic1 \
         locales \
         software-properties-common \
         sudo \
@@ -28,15 +27,9 @@ RUN apt-get update \
         zsh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Caddy web server
-RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
-    && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list \
-    && apt update \
-    && apt install caddy
-
-# Install Node.js 20 from https://github.com/nodesource
-ENV NODE_MAJOR 20 
-RUN mkdir -p /etc/apt/keyrings \ 
+# Install the current Node.js LTS release from https://github.com/nodesource
+ENV NODE_MAJOR=24
+RUN mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list \
     && apt-get update \
@@ -88,7 +81,7 @@ RUN locale-gen en_US.UTF-8
 
 # Configure zsh
 USER $USERNAME
-ENV HOME /home/$USERNAME
+ENV HOME=/home/$USERNAME
 
 # Add zsh theme with niceties
 RUN curl https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash - \
@@ -98,5 +91,7 @@ RUN curl https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.
 # Install Python requirements.txt
 COPY server/requirements.txt /workspace/requirements.txt
 WORKDIR /workspace
-RUN echo 'export PYTHONPATH=/workspace/server/src' >>~/.zshrc && \
-    python3 -m pip install -r requirements.txt
+RUN python3 -m pip install -r requirements.txt
+
+# The devcontainer post-create step installs the mounted source package and
+# client dependencies using the same commands as the native workflow.

@@ -1,8 +1,7 @@
 const path = require('path');
 
 module.exports = {
-    mode: 'development',  // Use 'production' for minification and optimization
-    entry: './src/index.ts',  // Entry point of your application
+    entry: path.resolve(__dirname, 'src', 'index.ts'),
     module: {
         rules: [
             {
@@ -27,7 +26,8 @@ module.exports = {
         extensions: ['.tsx', '.ts', '.js'],
     },
     output: {
-        filename: 'bundle.js',  // Output file
+        clean: true,
+        filename: 'bundle.js',
         path: path.resolve(__dirname, 'dist'),
     },
 };

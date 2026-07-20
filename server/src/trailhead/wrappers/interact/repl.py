@@ -89,8 +89,8 @@ class InteractiveInterpreter:
 
             tree = ast.parse(source)
             original_ast = copy.deepcopy(tree)
-            if tree.body[-1].__class__.__name__ == "Expr" and exec_callback is not None:
-                transformer = ReplaceLastExpr(tree.body[-1])  # type: ignore
+            if isinstance(tree.body[-1], ast.Expr) and exec_callback is not None:
+                transformer = ReplaceLastExpr(tree.body[-1])
                 tree = transformer.visit(tree)
             else:
                 tree.body.append(
@@ -126,7 +126,9 @@ class InteractiveInterpreter:
         self.runcode(code, exec_callback, original_ast)
         return False
 
-    def runcode(self, code, exec_callback=None, ast: ast.Module = None):
+    def runcode(
+        self, code, exec_callback=None, statement_ast: ast.Module | None = None
+    ):
         """Execute a code object.
 
         When an exception occurs, self.showtraceback() is called to
@@ -140,7 +142,7 @@ class InteractiveInterpreter:
         """
         try:
             self.locals["__exec_callback__"] = exec_callback
-            self.locals["__exec_ast__"] = ast
+            self.locals["__exec_ast__"] = statement_ast
             exec(code, self.locals)
             del self.locals["__exec_callback__"]
             del self.locals["__exec_ast__"]
@@ -161,12 +163,14 @@ class InteractiveInterpreter:
         The output is written by self.write(), below.
 
         """
-        type, value, tb = sys.exc_info()
-        sys.last_exc = value
-        sys.last_type = type
+        exc_type, value, tb = sys.exc_info()
+        if exc_type is None or value is None:
+            return
+        setattr(sys, "last_exc", value)
+        sys.last_type = exc_type
         sys.last_value = value
         sys.last_traceback = tb
-        if filename and type is SyntaxError:
+        if filename and isinstance(value, SyntaxError):
             # Work hard to stuff the correct filename in the exception
             try:
                 msg, (dummy_filename, lineno, offset, line) = value.args
@@ -176,14 +180,15 @@ class InteractiveInterpreter:
             else:
                 # Stuff in the right filename
                 value = SyntaxError(msg, (filename, lineno, offset, line))
-                sys.last_exc = sys.last_value = value
+                setattr(sys, "last_exc", value)
+                sys.last_value = value
         if sys.excepthook is sys.__excepthook__:
-            lines = traceback.format_exception_only(type, value)
+            lines = traceback.format_exception_only(exc_type, value)
             self.write("".join(lines))
         else:
             # If someone has set sys.excepthook, we let that take precedence
             # over self.write
-            sys.excepthook(type, value, tb)
+            sys.excepthook(exc_type, value, tb)
 
     def showtraceback(self):
         """Display the exception that just occurred.
@@ -193,19 +198,20 @@ class InteractiveInterpreter:
         The output is written by self.write(), below.
 
         """
-        sys.last_type, sys.last_value, last_tb = ei = sys.exc_info()
+        exc_type, value, last_tb = sys.exc_info()
+        if exc_type is None or value is None or last_tb is None:
+            return
+        sys.last_type = exc_type
+        sys.last_value = value
         sys.last_traceback = last_tb
-        sys.last_exc = ei[1]
-        try:
-            lines = traceback.format_exception(ei[0], ei[1], last_tb.tb_next)
-            if sys.excepthook is sys.__excepthook__:
-                self.write("".join(lines))
-            else:
-                # If someone has set sys.excepthook, we let that take precedence
-                # over self.write
-                sys.excepthook(ei[0], ei[1], last_tb)
-        finally:
-            last_tb = ei = None
+        setattr(sys, "last_exc", value)
+        lines = traceback.format_exception(exc_type, value, last_tb.tb_next)
+        if sys.excepthook is sys.__excepthook__:
+            self.write("".join(lines))
+        else:
+            # If someone has set sys.excepthook, we let that take precedence
+            # over self.write
+            sys.excepthook(exc_type, value, last_tb)
 
     def write(self, data):
         """Write a string.

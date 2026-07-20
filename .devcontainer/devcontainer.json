@@ -13,7 +13,9 @@
     "workspaceFolder": "/workspace",
     "remoteUser": "vscode",
     "containerUser": "vscode",
+    "postCreateCommand": "python3 -m pip install --user --editable '/workspace/server[dev]' && npm --prefix /workspace/client ci",
     "forwardPorts": [
+        1109,
         1110
     ],
     "customizations": {

@@ -4,6 +4,7 @@ WebSocketManager is responsible for maintaining a set of connected clients.
 It accepts new clients, notifying all clients of events, and removes clients
 when they disconnect. It can be shutdown using `stop` to close all clients.
 """
+
 __author__ = "Kris Jordan <kris@cs.unc.edu>"
 __copyright__ = "Copyright 2023"
 __license__ = "MIT"

@@ -1,1 +1,17 @@
+.git
+.github
+**/.venv
+.DS_Store
 **/__pycache__
+**/*.pyc
+**/node_modules
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info
+.trailhead-build-*
+client/dist
+compstagram/dist
+turtle/dist
+server/src/trailhead/static/index.html
+server/src/trailhead/static/assets/*

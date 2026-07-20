@@ -1,21 +1,74 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Build Trailhead's browser client and legacy unpacked distribution.
 
+This wrapper remains extensionless for compatibility with the original Docker
+workflow. On Windows, invoke it as ``py bin\build-trailhead``.
+"""
+
+from pathlib import Path
 import os
+import shutil
 import subprocess
+import tempfile
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-print(ROOT_DIR)
+ROOT_DIRECTORY = Path(__file__).resolve().parents[1]
+CLIENT_DIRECTORY = ROOT_DIRECTORY / "client"
+PACKAGE_DIRECTORY = ROOT_DIRECTORY / "server" / "src" / "trailhead"
+DIST_DIRECTORY = ROOT_DIRECTORY / "dist"
 
-# Delete dist directory, if it exists
-subprocess.run(["rm", "-rf", f"{ROOT_DIR}/dist"])
 
-# Recreate dist directory
-subprocess.run(["mkdir", "-p", f"{ROOT_DIR}/dist"])
+def find_npm() -> str:
+    candidates = ["npm.cmd", "npm.exe", "npm"] if os.name == "nt" else ["npm"]
+    for candidate in candidates:
+        executable = shutil.which(candidate)
+        if executable:
+            return executable
+    raise SystemExit(
+        "npm was not found. Install Node.js 22.12 or newer and run "
+        "scripts/bootstrap.py first."
+    )
 
-# Copy python server
-subprocess.run(["cp", "-r", f"{ROOT_DIR}/server/src/trailhead", f"{ROOT_DIR}/dist"])
 
-# Build client
-os.chdir(f"{ROOT_DIR}/client")
-subprocess.run(["npm", "run", "build"])
+def main() -> int:
+    npm = find_npm()
+    print(f"Building the Trailhead client in {CLIENT_DIRECTORY}", flush=True)
+    subprocess.run([npm, "run", "build"], cwd=CLIENT_DIRECTORY, check=True)
+
+    static_directory = PACKAGE_DIRECTORY / "static"
+    built_assets = [
+        path
+        for path in (static_directory / "assets").glob("*")
+        if path.is_file() and path.name != ".gitkeep"
+    ]
+    if not (static_directory / "index.html").is_file() or not built_assets:
+        raise SystemExit(
+            "The client build completed without producing static/index.html and "
+            "at least one browser asset; refusing to package stale output."
+        )
+
+    staging_directory = Path(
+        tempfile.mkdtemp(prefix=".trailhead-build-", dir=ROOT_DIRECTORY)
+    )
+    try:
+        shutil.copytree(
+            PACKAGE_DIRECTORY,
+            staging_directory / "trailhead",
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+        if DIST_DIRECTORY.exists():
+            shutil.rmtree(DIST_DIRECTORY)
+        staging_directory.replace(DIST_DIRECTORY)
+    finally:
+        if staging_directory.exists():
+            shutil.rmtree(staging_directory)
+
+    print(f"Built unpacked distribution at {DIST_DIRECTORY / 'trailhead'}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except subprocess.CalledProcessError as error:
+        raise SystemExit(error.returncode) from error

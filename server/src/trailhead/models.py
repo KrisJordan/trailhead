@@ -12,7 +12,7 @@ class Module(BaseModel):
 
 def get_discriminator_value(v: Any) -> str | None:
     if isinstance(v, dict):
-        return v.get("ns_type")  # type: ignore
+        return v.get("ns_type")
     return getattr(v, "ns_type")
 
 

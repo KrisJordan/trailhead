@@ -1,12 +1,13 @@
-# Reverse proxy from Caddy to development servers.
+# Optional reverse proxy for users who already have Caddy installed.
+# Native development uses Vite's built-in proxy and does not require this file.
 #
 # Port: Service
 # =============
-# 1560: Caddy
-# 1561: Backend (uvicorn / FastAPI)
-# 1562: Front-end (Webpack / Angular)
+# 1111: Caddy (optional entrypoint)
+# 1109: Backend (Uvicorn / FastAPI)
+# 1110: Frontend (Vite)
 
-http://localhost:1110
+http://localhost:1111
 
 reverse_proxy /ws http://localhost:1109
 reverse_proxy /ws/* http://localhost:1109
@@ -15,4 +16,4 @@ reverse_proxy /api/* http://localhost:1109
 reverse_proxy /docs http://localhost:1109
 reverse_proxy /docs/* http://localhost:1109
 reverse_proxy /openapi.json http://localhost:1109
-reverse_proxy * http://localhost:5173
+reverse_proxy * http://localhost:1110
