@@ -4,7 +4,6 @@ Utilities needed to emulate Python's interactive interpreter.
 
 # Inspired by built-in Python code: https://raw.githubusercontent.com/python/cpython/3.12/Lib/code.py
 
-
 import sys
 import traceback
 import ast

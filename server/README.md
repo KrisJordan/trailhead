@@ -1,16 +1,26 @@
 # Trailhead server
 
 Trailhead is a local FastAPI server for exploring and running Python modules in
-a browser. It supports Python 3.11 or newer on macOS, Windows, and Linux.
+a browser. It supports Python 3.11 or newer on macOS, Windows, and Linux. The
+PyPI distribution is named `trailhead-edu`; the import package and command remain
+`trailhead`.
 
-From the repository root, install it in a virtual environment with:
+Install the command from PyPI in an isolated tool environment with:
 
 ```console
-python -m pip install -e "server[dev,student]"
+uv tool install trailhead-edu
+```
+
+For repository development, synchronize the locked environment from the
+repository root:
+
+```console
+uv sync --project server --locked --extra student
 ```
 
 The `student` extra supplies the optional data-science and teaching libraries;
-the base install contains only Trailhead's server runtime. Run a project with:
+the base installation contains only Trailhead's server runtime. Run a project
+with:
 
 ```console
 trailhead --root demo

@@ -17,6 +17,7 @@ REQUIRED_PACKAGE_FILES = {
     "trailhead/wrappers/interact/__init__.py",
     "trailhead/static/index.html",
 }
+DISTRIBUTION_BASENAME = "trailhead_edu"
 
 
 def _wheel_entries(path: Path) -> tuple[set[str], str]:
@@ -64,8 +65,8 @@ def _check_package_entries(entries: set[str], prefix: str, label: str) -> list[s
 
 def verify(directory: Path) -> list[str]:
     errors: list[str] = []
-    wheels = sorted(directory.glob("trailhead-*.whl"))
-    sdists = sorted(directory.glob("trailhead-*.tar.gz"))
+    wheels = sorted(directory.glob(f"{DISTRIBUTION_BASENAME}-*.whl"))
+    sdists = sorted(directory.glob(f"{DISTRIBUTION_BASENAME}-*.tar.gz"))
     if len(wheels) != 1:
         errors.append(
             f"expected one Trailhead wheel in {directory}, found {len(wheels)}"

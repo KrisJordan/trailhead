@@ -17,7 +17,7 @@ from typing import Any
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CLIENT_DIRECTORY = REPOSITORY_ROOT / "client"
 COMPSTAGRAM_DIRECTORY = REPOSITORY_ROOT / "compstagram"
-VENV_DIRECTORY = REPOSITORY_ROOT / ".venv"
+VENV_DIRECTORY = REPOSITORY_ROOT / "server" / ".venv"
 
 
 def find_command(name: str) -> str | None:
@@ -273,9 +273,7 @@ def main() -> int:
     )
     if args.compstagram:
         print(
-            f"Serving Compstagram at "
-            f"http://{visible_host}:"
-            f"{args.compstagram_port}\n",
+            f"Serving Compstagram at http://{visible_host}:{args.compstagram_port}\n",
             flush=True,
         )
 

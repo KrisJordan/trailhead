@@ -1,0 +1,101 @@
+name: Publish release to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build and verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.6"
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Synchronize the locked Python environment
+        run: uv sync --project server --locked --python 3.12
+
+      - name: Verify the release tag and package version
+        shell: bash
+        run: |
+          package_version="$(uv run --project server --locked --no-sync trailhead --version)"
+          test "v${package_version}" = "${GITHUB_REF_NAME}"
+
+      - name: Check Python formatting
+        run: >-
+          uv run --project server --locked --no-sync ruff format --check
+          server/src server/tests scripts bin/build-trailhead
+
+      - name: Type-check Python
+        run: >-
+          uv run --project server --locked --no-sync mypy
+          --config-file server/pyproject.toml
+          server/src server/tests scripts bin/build-trailhead
+
+      - name: Run Python tests
+        run: >-
+          uv run --project server --locked --no-sync python -m pytest server/tests
+
+      - name: Build the browser client
+        run: |
+          npm ci --prefix client
+          npm run build --prefix client
+
+      - name: Build and verify release archives
+        run: |
+          uv build server --out-dir dist
+          uv run --project server --locked --no-sync python server/tests/verify_distribution.py dist
+
+      - name: Smoke-test the wheel
+        run: uv run --isolated --with dist/trailhead_edu-*.whl trailhead --version
+
+      - name: Smoke-test the source archive
+        run: uv run --isolated --with dist/trailhead_edu-*.tar.gz trailhead --version
+
+      - name: Preserve release archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/trailhead-edu/
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.6"
+
+      - name: Retrieve release archives
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always dist/*

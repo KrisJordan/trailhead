@@ -6,30 +6,32 @@ devcontainer, Caddy, and Honcho are optional and are not part of the native setu
 
 ## Requirements
 
-- Python 3.11 or newer (Python 3.12 is the recommended development version)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js 22.12 or newer with npm (Node.js 24 LTS is recommended)
 
-Node.js is needed to build or live-reload the browser client. Once the client has
-been built into the Python package, a normal Trailhead run only needs Python.
+uv installs the pinned Python 3.12 development runtime and manages the project
+environment from `server/uv.lock`. Node.js is needed to build or live-reload the
+browser client. Once the client has been built into the Python package, a normal
+Trailhead run only needs Python 3.11 or newer.
 
 ## Native quick start
 
-The bootstrap script creates an isolated `.venv`, installs Trailhead in editable
-mode, installs the client with `npm ci`, and builds the browser assets. It uses
-only Python and works on all three host platforms.
+The bootstrap script uses uv to synchronize `server/.venv`, installs Trailhead in
+editable mode, installs the client with `npm ci`, and builds the browser assets.
+It works on all three host platforms.
 
 macOS or Linux:
 
 ```sh
-python3 scripts/bootstrap.py
-.venv/bin/python scripts/dev.py
+uv run python scripts/bootstrap.py
+uv run --project server python scripts/dev.py
 ```
 
 Windows PowerShell or Command Prompt:
 
 ```powershell
-py -3 scripts\bootstrap.py
-.venv\Scripts\python.exe scripts\dev.py
+uv run python scripts\bootstrap.py
+uv run --project server python scripts\dev.py
 ```
 
 Open <http://127.0.0.1:1110>. The development runner starts the Python backend on
@@ -45,11 +47,11 @@ By default Trailhead opens the repository's `demo` project. Pass another project
 directory, including a path containing spaces, as the first argument:
 
 ```sh
-.venv/bin/python scripts/dev.py /path/to/python-project
+uv run --project server python scripts/dev.py /path/to/python-project
 ```
 
 ```powershell
-.venv\Scripts\python.exe scripts\dev.py "C:\Users\Student\My Project"
+uv run --project server python scripts\dev.py "C:\Users\Student\My Project"
 ```
 
 Run `scripts/dev.py --help` for host, backend port, frontend port, browser-open,
@@ -60,15 +62,14 @@ The local `demo/compstagram.py` module uses an optional template server on port
 build and launch it with the managed development processes:
 
 ```sh
-python3 scripts/bootstrap.py --student
+uv run python scripts/bootstrap.py --student
 npm ci --prefix compstagram
 npm run build --prefix compstagram
-.venv/bin/python scripts/dev.py --compstagram
+uv run --project server python scripts/dev.py --compstagram
 ```
 
-On Windows, use `py -3 scripts\bootstrap.py --student` first and
-`.venv\Scripts\python.exe` in the final command. Ctrl+C stops the backend, Vite,
-and the template server together.
+On Windows, use backslashes in the script paths if desired. Ctrl+C stops the
+backend, Vite, and the template server together.
 
 ## Run the built application
 
@@ -78,13 +79,13 @@ server directly when live frontend reloading is not needed:
 macOS or Linux:
 
 ```sh
-.venv/bin/trailhead --root demo
+uv run --project server trailhead --root demo
 ```
 
 Windows:
 
 ```powershell
-.venv\Scripts\trailhead.exe --root demo
+uv run --project server trailhead --root demo
 ```
 
 This serves both the API and built client at <http://127.0.0.1:1110>. The command
@@ -106,7 +107,7 @@ The development runner automatically allows the frontend URL for a concrete
 origin (and ensure the host firewall is configured appropriately):
 
 ```sh
-.venv/bin/python scripts/dev.py --host 0.0.0.0 \
+uv run --project server python scripts/dev.py --host 0.0.0.0 \
   --allow-origin http://192.168.1.50:1110
 ```
 
@@ -119,36 +120,29 @@ configuration.
 
 ## Manual setup
 
-If a scripted bootstrap is undesirable, the equivalent commands are:
-
-macOS or Linux:
+If a scripted bootstrap is undesirable, the equivalent commands on all platforms
+are:
 
 ```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install --editable "server[dev]"
+uv sync --project server --locked
 npm ci --prefix client
 npm run build --prefix client
 ```
 
-Windows:
-
-```powershell
-py -3 -m venv .venv
-.venv\Scripts\python.exe -m pip install --editable "server[dev]"
-npm ci --prefix client
-npm run build --prefix client
-```
-
-Virtual-environment activation is optional; using its interpreter or generated
-`trailhead` executable explicitly avoids shell-specific activation and PowerShell
-execution-policy issues.
+Add `--extra student` to `uv sync` for the optional teaching and data-science
+packages. uv installs the project as editable by default; environment activation
+is unnecessary when commands are run through `uv run --project server`.
 
 ## Development and verification
 
 ```sh
 # Python tests and type checking
-.venv/bin/python -m pytest server/tests
-.venv/bin/python -m mypy --config-file server/pyproject.toml \
+uv run --project server --locked python -m pytest server/tests
+uv run --project server --locked mypy --config-file server/pyproject.toml \
+  server/src server/tests scripts bin/build-trailhead
+
+# Python formatting
+uv run --project server --locked ruff format --check \
   server/src server/tests scripts bin/build-trailhead
 
 # Browser client checks
@@ -162,20 +156,17 @@ npm ci --prefix turtle
 npm run build --prefix turtle
 ```
 
-On Windows, substitute `.venv\Scripts\python.exe` for `.venv/bin/python`; the npm
-commands are identical.
-
 The legacy unpacked distribution used by `Dockerfile.students` can be produced
 portably with:
 
 ```sh
-python3 bin/build-trailhead
+uv run --project server python bin/build-trailhead
 ```
 
 or on Windows:
 
 ```powershell
-py -3 bin\build-trailhead
+uv run --project server python bin\build-trailhead
 ```
 
 The build script uses Python filesystem APIs rather than Unix commands, fails on
@@ -200,11 +191,11 @@ Python APIs that work across macOS, Windows, and Linux.
   ports to `scripts/dev.py`. For the built server, pass `--port`.
 - A page reports that browser assets are missing: run `npm ci --prefix client`
   followed by `npm run build --prefix client`.
-- A Linux distribution reports that `venv` is unavailable: install the package
-  that provides Python virtual environments (often named `python3-venv`) and
-  rerun the bootstrap script.
-- To reset only the local Python environment, remove `.venv` and rerun the
-  bootstrap. Client dependencies can be recreated at any time with `npm ci`.
+- uv cannot find a compatible Python: run `uv python install 3.12`, then rerun
+  the bootstrap script.
+- To reset only the local Python environment, remove `server/.venv` and run
+  `uv sync --project server --locked`. Client dependencies can be recreated at
+  any time with `npm ci`.
 
 ## Optional Docker workflow
 

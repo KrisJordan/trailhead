@@ -1,5 +1,7 @@
 FROM ubuntu:22.04
 
+COPY --from=ghcr.io/astral-sh/uv:0.10.6 /uv /uvx /bin/
+
 # Setup workspace directory
 RUN mkdir /workspace
 WORKDIR /workspace
@@ -45,16 +47,10 @@ RUN add-apt-repository ppa:deadsnakes/ppa \
         libpq-dev \
         python3.12-dev \
         python3.12-distutils \
-        python3-pip \
         libcairo2 \
     && rm -rf /var/lib/apt/lists* \
     && unlink /usr/bin/python3 \
     && ln -s /usr/bin/python3.12 /usr/bin/python3
-
-# Update PIP for 3.12 / Ubuntu compatibility (https://ubuntuhandbook.org/index.php/2023/10/fix-broken-pip-python-312-ubuntu/)
-RUN wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
-    python3 /tmp/get-pip.py && \
-    rm /tmp/get-pip.py
 
 # Use a non-root user per https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
 ARG USERNAME=vscode
@@ -88,10 +84,5 @@ RUN curl https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.
     && sed -i 's/robbyrussell/kennethreitz/g' ~/.zshrc \
     && echo 'export PATH=$PATH:$HOME/.local/bin:/workspace/bin' >>~/.zshrc
 
-# Install Python requirements.txt
-COPY server/requirements.txt /workspace/requirements.txt
-WORKDIR /workspace
-RUN python3 -m pip install -r requirements.txt
-
-# The devcontainer post-create step installs the mounted source package and
-# client dependencies using the same commands as the native workflow.
+# The devcontainer post-create step uses uv to synchronize the mounted source
+# package and installs client dependencies using the native workflow.

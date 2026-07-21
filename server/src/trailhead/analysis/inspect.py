@@ -75,7 +75,6 @@ def extract_global_vars(tree: ast.Module) -> Dict[str, Any]:
 
     variable_dict = {}
     for node in assignment_nodes:
-
         if isinstance(node, ast.AnnAssign):
             if not isinstance(node.target, ast.Name):
                 continue

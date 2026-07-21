@@ -13,7 +13,7 @@
     "workspaceFolder": "/workspace",
     "remoteUser": "vscode",
     "containerUser": "vscode",
-    "postCreateCommand": "python3 -m pip install --user --editable '/workspace/server[dev]' && npm --prefix /workspace/client ci",
+    "postCreateCommand": "uv sync --project /workspace/server --locked && npm --prefix /workspace/client ci",
     "forwardPorts": [
         1109,
         1110
@@ -23,8 +23,7 @@
             "extensions": [
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "ms-python.black-formatter",
-                "ms-python.flake8",
+                "charliermarsh.ruff",
                 "ms-toolsai.jupyter"
             ],
             "settings": {
@@ -32,10 +31,10 @@
                 "editor.formatOnSave": true,
                 "editor.formatOnSaveMode": "file",
                 "[python]": {
-                    "editor.defaultFormatter": "ms-python.black-formatter",
+                    "editor.defaultFormatter": "charliermarsh.ruff",
                     "editor.formatOnSave": true
                 },
-                "python.defaultInterpreterPath": "/usr/bin/python3",
+                "python.defaultInterpreterPath": "/workspace/server/.venv/bin/python",
                 "python.testing.pytestEnabled": true,
                 "python.testing.unittestEnabled": false,
                 "python.analysis.diagnosticSeverityOverrides": {

@@ -1,6 +1,8 @@
 ARG ARCH=
 FROM ${ARCH}ubuntu:22.04 AS packages
 
+COPY --from=ghcr.io/astral-sh/uv:0.10.6 /uv /uvx /bin/
+
 # Setup workspace directory
 RUN mkdir /workspace
 WORKDIR /workspace
@@ -37,15 +39,9 @@ RUN add-apt-repository ppa:deadsnakes/ppa \
         python3.12 \
         python3.12-dev \
         python3.12-distutils \
-        python3-pip \
     && rm -rf /var/lib/apt/lists* \
     && unlink /usr/bin/python3 \
     && ln -s /usr/bin/python3.12 /usr/bin/python3
-
-# Update PIP for 3.12 / Ubuntu compatibility (https://ubuntuhandbook.org/index.php/2023/10/fix-broken-pip-python-312-ubuntu/)
-RUN wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
-    python3 /tmp/get-pip.py && \
-    rm /tmp/get-pip.py
 
 # Use a non-root user per https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
 ARG USERNAME=vscode
@@ -61,11 +57,22 @@ USER $USERNAME
 ENV HOME=/home/$USERNAME
 ENV PATH="/home/$USERNAME/.local/bin:${PATH}"
 
-# Install Python requirements.txt
-COPY server/requirements.txt /workspace/requirements.txt
+# Install the locked runtime and student dependencies into the user prefix.
+COPY server/pyproject.toml server/uv.lock /workspace/server/
 WORKDIR /workspace
-RUN python3 -m pip install --user -r requirements.txt && \
-    python3 -m pip cache purge
+RUN uv export \
+        --project /workspace/server \
+        --locked \
+        --no-dev \
+        --extra student \
+        --no-emit-project \
+        --no-hashes \
+        --output-file /tmp/trailhead-requirements.txt \
+    && uv pip install \
+        --python /usr/bin/python3.12 \
+        --prefix "/home/$USERNAME/.local" \
+        --requirements /tmp/trailhead-requirements.txt \
+    && uv cache clean
 
 
 # === Stage 2 ===
