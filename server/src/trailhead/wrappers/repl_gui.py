@@ -179,5 +179,5 @@ try:
     console.interact(banner="")
 
 except Exception as error:
-    emit_exception(error)
+    emit_exception(error, root_module=module_name)
     raise SystemExit(1) from None

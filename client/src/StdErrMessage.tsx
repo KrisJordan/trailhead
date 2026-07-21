@@ -13,25 +13,33 @@ interface StackFrame {
     lineno: number;
     name: string;
     line: string;
-    end_lineno: number;
-    colno: number;
-    end_colno: number;
-    locals: { [key: string]: any };
+    end_lineno: number | null;
+    colno: number | null;
+    end_colno: number | null;
+    locals: Record<string, unknown>;
 }
 
-function valueToJSX(value: any): JSX.Element {
+interface ValuePreview {
+    type: string;
+    repr: string;
+}
+
+function isValuePreview(value: unknown): value is ValuePreview {
+    return typeof value === 'object'
+        && value !== null
+        && 'type' in value
+        && typeof value.type === 'string'
+        && 'repr' in value
+        && typeof value.repr === 'string';
+}
+
+function valueToJSX(value: unknown): JSX.Element {
     if (typeof value === 'boolean') {
         return <span>{value ? 'True' : 'False'}</span>;
     } else if (typeof value === 'string') {
-        return <span>"{value}"</span>
-    } else if (typeof value === 'object') {
-        if (value instanceof Array) {
-            return <span>{JSON.stringify(value)}</span>
-        } else if (value instanceof Object && value.hasOwnProperty('type')) {
-            return <div>
-                <div><strong>{value.type}</strong> Object (See in Debugger)</div>
-            </div>
-        }
+        return <span>{JSON.stringify(value)}</span>;
+    } else if (isValuePreview(value)) {
+        return <span><strong>{value.type}</strong> {value.repr}</span>;
     }
     return <span>{JSON.stringify(value)}</span>;
 }
@@ -39,11 +47,12 @@ function valueToJSX(value: any): JSX.Element {
 export function StdErrMessage(props: React.PropsWithChildren<StdErrProps>) {
     try {
         const message = JSON.parse(props.line) as StackTrace;
-        console.log(message);
 
         const lastIndex = message.stack_trace.length - 1;
 
         const frames = message.stack_trace.map((frame, index) => {
+            const colno = frame.colno ?? 0;
+            const endColno = Math.max(frame.end_colno ?? colno + 1, colno + 1);
             let className = "collapse bg-base-200 mt-2";
             if (index !== lastIndex) {
                 className += " collapse-arrow";
@@ -59,25 +68,28 @@ export function StdErrMessage(props: React.PropsWithChildren<StdErrProps>) {
                 <div className="collapse-content">
                     <pre>
                         {frame.lineno.toString().padStart(4, " ")} | {frame.line}
-                        {" ".repeat(7 + frame.colno) + "^".repeat(frame.end_colno - frame.colno) + "\n"}
+                        {" ".repeat(7 + colno) + "^".repeat(endColno - colno) + "\n"}
                         {index !== lastIndex ? "" : `${message.type}: ${message.message}`}
                     </pre>
-                    <table className="table m-0 table-fixed">
-                        <thead>
-                            <tr>
-                                <th className="w-36">Variable</th>
-                                <th>Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {Object.keys(frame.locals).map((key, index) => {
-                                return <tr key={index}>
-                                    <td className="font-mono">{key}</td>
-                                    <td className="font-mono">{valueToJSX(frame.locals[key])}</td>
+                    {Object.keys(frame.locals).length > 0 && <>
+                        <h5 className="mb-0">Variables at this point</h5>
+                        <table className="table m-0 table-fixed">
+                            <thead>
+                                <tr>
+                                    <th className="w-36">Variable</th>
+                                    <th>Value</th>
                                 </tr>
-                            })}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {Object.keys(frame.locals).map((key) => {
+                                    return <tr key={key}>
+                                        <td className="font-mono">{key}</td>
+                                        <td className="font-mono break-words">{valueToJSX(frame.locals[key])}</td>
+                                    </tr>
+                                })}
+                            </tbody>
+                        </table>
+                    </>}
                 </div>
             </div>;
         });

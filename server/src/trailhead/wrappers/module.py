@@ -28,5 +28,5 @@ sys.addaudithook(audit_hook)
 try:
     runpy.run_module(module_name, run_name="__main__", alter_sys=True)
 except Exception as error:
-    emit_exception(error)
+    emit_exception(error, root_module=module_name)
     raise SystemExit(1) from None

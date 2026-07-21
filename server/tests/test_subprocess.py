@@ -38,6 +38,28 @@ async def _wait_for_stdout(socket: RecordingSocket, expected: str) -> None:
     await asyncio.wait_for(wait(), timeout=10)
 
 
+async def _run_failing_module(
+    tmp_path: Path, module_name: str, source: str
+) -> dict[str, object]:
+    (tmp_path / f"{module_name}.py").write_text(source, encoding="utf-8")
+    recording_socket = RecordingSocket()
+    process = AsyncPythonSubprocess(
+        module_name,
+        cast(WebSocket, recording_socket),
+        project_root=tmp_path,
+    )
+
+    await process.start()
+    assert await asyncio.wait_for(process.await_end(), timeout=10) == 1
+
+    stderr = [
+        message for message in recording_socket.messages if message["type"] == "STDERR"
+    ]
+    assert len(stderr) == 1
+    data = cast(dict[str, object], stderr[0]["data"])
+    return cast(dict[str, object], json.loads(cast(str, data["data"])))
+
+
 def _write_descendant_module(
     module: Path,
     sentinel: Path,
@@ -84,6 +106,49 @@ def test_child_command_uses_current_interpreter(tmp_path: Path) -> None:
         "-m",
         "trailhead.wrappers.module",
         "example",
+    )
+
+
+async def test_syntax_error_is_rooted_at_student_module(tmp_path: Path) -> None:
+    payload = await _run_failing_module(
+        tmp_path,
+        "syntax_example",
+        "course = 'COMP 110'\nanswer = 1 +\n",
+    )
+
+    assert payload["type"] == "SyntaxError"
+    frames = cast(list[dict[str, object]], payload["stack_trace"])
+    assert [
+        (frame["filename"], frame["lineno"], frame["name"]) for frame in frames
+    ] == [("syntax_example.py", 2, "<module>")]
+    assert frames[0]["line"] == "answer = 1 +\n"
+
+
+async def test_runtime_error_is_rooted_at_student_module_with_locals(
+    tmp_path: Path,
+) -> None:
+    payload = await _run_failing_module(
+        tmp_path,
+        "runtime_example",
+        "course = 'COMP 110'\n"
+        "attempt = 2\n"
+        "def divide():\n"
+        "    divisor = 0\n"
+        "    return attempt / divisor\n"
+        "divide()\n",
+    )
+
+    assert payload["type"] == "ZeroDivisionError"
+    frames = cast(list[dict[str, object]], payload["stack_trace"])
+    assert [
+        (frame["filename"], frame["lineno"], frame["name"]) for frame in frames
+    ] == [
+        ("runtime_example.py", 6, "<module>"),
+        ("runtime_example.py", 5, "divide"),
+    ]
+    assert cast(dict[str, object], frames[-1]["locals"])["divisor"] == 0
+    assert all(
+        "trailhead/wrappers" not in cast(str, frame["filename"]) for frame in frames
     )
 
 

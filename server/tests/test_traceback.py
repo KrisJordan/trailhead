@@ -19,3 +19,18 @@ def test_exception_payload_has_no_container_paths() -> None:
     assert payload["type"] == "ValueError"
     assert payload["message"] == "portable"
     assert "/workspace/" not in str(payload)
+
+
+def test_exception_payload_includes_preview_for_non_json_local() -> None:
+    opaque = object()
+
+    try:
+        raise RuntimeError("inspect me")
+    except RuntimeError as error:
+        payload = exception_payload(error, root_module=__name__)
+
+    frame = payload["stack_trace"][-1]
+    assert frame["locals"]["opaque"] == {
+        "type": "object",
+        "repr": repr(opaque),
+    }

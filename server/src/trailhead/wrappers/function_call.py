@@ -30,5 +30,5 @@ try:
     function_call = sys.argv[2]
     print(eval(f"module.{function_call}"))
 except Exception as error:
-    emit_exception(error)
+    emit_exception(error, root_module=module_name)
     raise SystemExit(1) from None
