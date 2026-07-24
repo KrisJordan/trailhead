@@ -10,6 +10,9 @@ export function ModuleContext() {
     const moduleName = useLoaderData();
     return <div>
         <div role="tablist" className="tabs tabs-lg mb-2">
+            {moduleInfo?.is_pytest_candidate && (
+                <NavLink to="./tests" role="tab" className={({ isActive }) => isActive ? activeTabClass : 'tab'}>Tests</NavLink>
+            )}
             <NavLink to="./run" role="tab" className={({ isActive }) => isActive ? activeTabClass : 'tab'}>Run</NavLink>
             <NavLink to="./repl" role="tab" className={({ isActive }) => isActive ? activeTabClass : 'tab'} aria-label="Interact">Interact</NavLink>
             {moduleInfo?.global_vars?.["__template__"] && (

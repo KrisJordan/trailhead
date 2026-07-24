@@ -34,6 +34,7 @@ const moduleInfo = (overrides: Partial<ModuleInfo> = {}): ModuleInfo => ({
     top_level_calls: [],
     global_vars: {},
     has_main_guard: false,
+    is_pytest_candidate: false,
     ...overrides,
 });
 
@@ -107,6 +108,7 @@ describe("moduleLoader", () => {
             has_main_guard: true,
             top_level_functions: [{ name: "main" }],
         })],
+        ["tests", moduleInfo({ is_pytest_candidate: true })],
     ])("preserves an explicitly selected %s tab", async (tool, info) => {
         stubModuleResponse(info);
 
@@ -123,6 +125,15 @@ describe("moduleLoader", () => {
 
 describe("defaultModuleTool", () => {
     it.each([
+        [
+            "pytest module",
+            moduleInfo({
+                is_pytest_candidate: true,
+                global_vars: { __template__: "/template.html" },
+                has_main_guard: true,
+            }),
+            "tests",
+        ],
         [
             "GUI template",
             moduleInfo({

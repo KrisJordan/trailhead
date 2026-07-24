@@ -94,6 +94,7 @@ export interface ModuleInfo {
     top_level_calls: string[];
     global_vars: { [key: string]: any };
     has_main_guard: boolean;
+    is_pytest_candidate: boolean;
 }
 
 export interface ModuleState {

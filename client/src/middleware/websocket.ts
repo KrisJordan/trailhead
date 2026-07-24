@@ -40,11 +40,35 @@ export const websocketMiddlewareFactory = () => {
                         case 'LS':
                             dispatch(setFiles(message.data.files));
                             break;
+                        case 'directory_created':
                         case 'directory_modified':
+                        case 'directory_moved':
+                        case 'directory_deleted':
+                            socket?.send({ type: "LS", data: { path: "/" } });
+                            break;
+                        case 'file_created':
+                        case 'file_moved':
+                        case 'file_deleted':
+                            dispatch({
+                                type: 'tests/projectPythonChanged',
+                                payload: {
+                                    kind: message.type,
+                                    path: message.data.path,
+                                },
+                            });
                             socket?.send({ type: "LS", data: { path: "/" } });
                             break;
                         case 'file_modified':
-                            router.navigate(".", { replace: true });
+                            dispatch({
+                                type: 'tests/projectPythonChanged',
+                                payload: {
+                                    kind: message.type,
+                                    path: message.data.path,
+                                },
+                            });
+                            if (!router.state.location.pathname.endsWith("/tests")) {
+                                router.navigate(".", { replace: true });
+                            }
                             break;
 
                     }

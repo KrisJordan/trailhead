@@ -7,6 +7,7 @@ import { ModuleIndex } from "./ModuleIndex";
 import { Home } from "./home/Home";
 import { HomeIndex } from "./home/HomeIndex";
 import { GraphicalUI } from "./GraphicalUI";
+import { ModuleTests } from "./ModuleTests";
 
 
 
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
                         path: "gui",
                         loader: guiLoader,
                         element: <GraphicalUI />
+                    },
+                    {
+                        path: "tests",
+                        element: <ModuleTests />
                     }
                 ]
             }

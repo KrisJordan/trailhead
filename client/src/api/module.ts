@@ -2,9 +2,12 @@ import { ModuleInfo, clearModule, setModule } from "../features/module";
 import store from "../app/store";
 import router from "../routes";
 
-export type ModuleTool = "gui" | "run" | "repl";
+export type ModuleTool = "gui" | "run" | "repl" | "tests";
 
 export const defaultModuleTool = (moduleInfo: ModuleInfo): ModuleTool => {
+    if (moduleInfo.is_pytest_candidate) {
+        return "tests";
+    }
     if (moduleInfo.global_vars?.["__template__"]) {
         return "gui";
     }
