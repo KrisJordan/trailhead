@@ -11,6 +11,7 @@ import zipfile
 REQUIRED_PACKAGE_FILES = {
     "trailhead/__init__.py",
     "trailhead/__main__.py",
+    "trailhead/_child_bootstrap.py",
     "trailhead/app.py",
     "trailhead/wrappers/__init__.py",
     "trailhead/wrappers/module.py",

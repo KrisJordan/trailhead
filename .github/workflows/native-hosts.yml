@@ -72,6 +72,17 @@ jobs:
         run: >-
           uv run --project server --locked --no-sync python -m pytest server/tests
 
+      - name: Test Python 3.14 debugpy subprocess attachment
+        if: matrix.python-version == '3.14'
+        env:
+          TRAILHEAD_DEBUGPY_SUBPROCESS_TEST: "1"
+        run: >-
+          uv run --project server --locked --no-sync
+          --with debugpy==1.8.20
+          python -m debugpy --listen 127.0.0.1:0
+          -m pytest
+          server/tests/test_subprocess.py::test_python_314_debugpy_attaches_to_child
+
       - name: Check installed dependencies and CLI
         run: uv pip check --project server
 

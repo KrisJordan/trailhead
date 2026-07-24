@@ -12,6 +12,7 @@ from fastapi import WebSocket
 import pytest
 from starlette.websockets import WebSocketState
 
+from trailhead import _child_bootstrap
 from trailhead.async_python_subprocess import AsyncPythonSubprocess
 
 
@@ -104,10 +105,47 @@ def test_child_command_uses_current_interpreter(tmp_path: Path) -> None:
         sys.executable,
         "-u",
         "-P",
-        "-m",
+        str(Path(_child_bootstrap.__file__).resolve()),
         "trailhead.wrappers.module",
         "example",
     )
+
+
+def test_child_bootstrap_restores_wrapper_argv_and_dispatches_module(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str | None, bool]] = []
+
+    def run_module(
+        module_name: str, *, run_name: str | None = None, alter_sys: bool = False
+    ) -> None:
+        calls.append((module_name, run_name, alter_sys))
+
+    monkeypatch.setattr(_child_bootstrap.runpy, "run_module", run_module)
+    monkeypatch.setattr(_child_bootstrap.sys, "path", ["/student/project"])
+    monkeypatch.setattr(
+        _child_bootstrap.sys,
+        "argv",
+        [
+            "/installed/trailhead/_child_bootstrap.py",
+            "trailhead.wrappers.module",
+            "example",
+            "argument",
+        ],
+    )
+
+    _child_bootstrap.main()
+
+    assert _child_bootstrap.sys.argv == [
+        "trailhead.wrappers.module",
+        "example",
+        "argument",
+    ]
+    assert _child_bootstrap.sys.path == [
+        str(Path(_child_bootstrap.__file__).resolve().parents[1]),
+        "/student/project",
+    ]
+    assert calls == [("trailhead.wrappers.module", "__main__", True)]
 
 
 async def test_child_uses_server_installation_when_project_shadows_trailhead(
@@ -132,6 +170,60 @@ async def test_child_uses_server_installation_when_project_shadows_trailhead(
         message for message in recording_socket.messages if message["type"] == "STDOUT"
     ]
     assert stdout[0]["data"]["data"] == f"server wrapper loaded{os.linesep}"  # type: ignore[index]
+
+
+@pytest.mark.skipif(
+    os.environ.get("TRAILHEAD_DEBUGPY_SUBPROCESS_TEST") != "1",
+    reason="runs in the dedicated Python 3.14/debugpy CI session",
+)
+async def test_python_314_debugpy_attaches_to_child(tmp_path: Path) -> None:
+    assert sys.version_info[:2] == (3, 14)
+    debugpy = sys.modules.get("debugpy")
+    assert debugpy is not None
+    assert getattr(debugpy, "__version__", None) == "1.8.20"
+    (tmp_path / "debugpy_probe.py").write_text(
+        "import json\n"
+        "import sys\n"
+        "from _pydevd_bundle.pydevd_constants import get_global_debugger\n"
+        "\n"
+        "print(json.dumps({\n"
+        "    'debugger_installed': get_global_debugger() is not None,\n"
+        "    'monitoring_tool': sys.monitoring.get_tool(\n"
+        "        sys.monitoring.DEBUGGER_ID\n"
+        "    ),\n"
+        "    'safe_path': sys.flags.safe_path,\n"
+        "}), flush=True)\n",
+        encoding="utf-8",
+    )
+    recording_socket = RecordingSocket()
+    process = AsyncPythonSubprocess(
+        "debugpy_probe",
+        cast(WebSocket, recording_socket),
+        project_root=tmp_path,
+    )
+
+    await process.start()
+    try:
+        return_code = await asyncio.wait_for(process.await_end(), timeout=20)
+        stderr_text = "".join(
+            cast(str, cast(dict[str, object], message["data"])["data"])
+            for message in recording_socket.messages
+            if message["type"] == "STDERR"
+        )
+        assert return_code == 0, stderr_text
+
+        stdout_text = "".join(
+            cast(str, cast(dict[str, object], message["data"])["data"])
+            for message in recording_socket.messages
+            if message["type"] == "STDOUT"
+        )
+        assert json.loads(stdout_text) == {
+            "debugger_installed": True,
+            "monitoring_tool": "pydevd",
+            "safe_path": True,
+        }
+    finally:
+        process.kill()
 
 
 async def test_syntax_error_is_rooted_at_student_module(tmp_path: Path) -> None:

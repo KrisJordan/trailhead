@@ -20,7 +20,9 @@ from .web_socket_event import WebSocketEvent
 
 TEN_MEGABYTES: int = 10 * 1024 * 1024
 _PROMPT_PREFIX = b"\xff\xff\xff\xff"
-_TRAILHEAD_IMPORT_ROOT = Path(__file__).resolve().parents[1]
+_TRAILHEAD_PACKAGE_ROOT = Path(__file__).resolve().parent
+_TRAILHEAD_IMPORT_ROOT = _TRAILHEAD_PACKAGE_ROOT.parent
+_CHILD_BOOTSTRAP = _TRAILHEAD_PACKAGE_ROOT / "_child_bootstrap.py"
 
 _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9
@@ -278,7 +280,7 @@ class AsyncPythonSubprocess:
             sys.executable,
             "-u",
             "-P",
-            "-m",
+            str(_CHILD_BOOTSTRAP),
             self._wrapper,
             self._module,
         )
@@ -295,7 +297,7 @@ class AsyncPythonSubprocess:
         environment["PYTHONIOENCODING"] = "utf-8"
         environment["PYTHONUTF8"] = "1"
         # The server may have been imported through debugger-managed sys.path
-        # state which a fresh child does not inherit. Also, without -P, `-m`
+        # state which a fresh child does not inherit. Also, without -P, Python
         # searches the student's project before the installed Trailhead package,
         # so a project package named `trailhead` can shadow our wrappers.
         python_path = environment.get("PYTHONPATH")
