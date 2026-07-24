@@ -11,11 +11,11 @@ from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from .project import get_project_root, module_file
+from .pytest_protocol import MAX_NODE_ID_BYTES
 from .pytest_subprocess import AsyncPytestSubprocess
 from .web_socket_event import WebSocketEvent
 
 MAX_RUN_ID_LENGTH = 256
-MAX_NODE_ID_LENGTH = 16 * 1024
 
 
 async def _send(client: WebSocket, event_type: str, run_id: str, **data: Any) -> None:
@@ -59,7 +59,7 @@ def _selected_node_ids(data: dict[str, Any]) -> tuple[str, ...] | None:
         if (
             not isinstance(node_id, str)
             or not node_id
-            or len(node_id) > MAX_NODE_ID_LENGTH
+            or (len(node_id.encode("utf-8", errors="replace")) > MAX_NODE_ID_BYTES)
         ):
             return None
         node_ids.append(node_id)
@@ -143,7 +143,9 @@ async def pytest_websocket(module: str, client: WebSocket) -> None:
             if completion is not None and completion in done:
                 with suppress(Exception):
                     await completion
-                if active is not None and active.mode == "collect":
+                if active is not None and (
+                    active.mode == "collect" or not active.node_ids
+                ):
                     collected_node_ids = active.collected_node_ids
                 completion = None
                 active = None
@@ -156,7 +158,9 @@ async def pytest_websocket(module: str, client: WebSocket) -> None:
             if completion is not None and completion.done():
                 with suppress(Exception):
                     await completion
-                if active is not None and active.mode == "collect":
+                if active is not None and (
+                    active.mode == "collect" or not active.node_ids
+                ):
                     collected_node_ids = active.collected_node_ids
                 completion = None
                 active = None

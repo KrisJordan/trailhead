@@ -14,6 +14,7 @@ from starlette.websockets import WebSocketState
 
 from .platform_process import ManagedProcess, open_process
 from .project import get_project_root
+from .pytest_protocol import DEFERRED_PYTHONPATH_ENV
 from .web_socket_event import WebSocketEvent
 
 TEN_MEGABYTES: int = 10 * 1024 * 1024
@@ -80,20 +81,20 @@ class AsyncPythonSubprocess:
         # searches the student's project before the installed Trailhead package,
         # so a project package named `trailhead` can shadow our wrappers.
         python_path = environment.get("PYTHONPATH")
+        environment.pop(DEFERRED_PYTHONPATH_ENV, None)
         import_paths = [str(_TRAILHEAD_IMPORT_ROOT)]
         if self._include_project_import_path:
             import_paths.append(str(self._project_root))
-        if python_path:
-            for configured_path in python_path.split(os.pathsep):
-                if not configured_path:
-                    continue
-                if not self._include_project_import_path:
-                    try:
-                        if Path(configured_path).resolve() == self._project_root:
-                            continue
-                    except OSError:
-                        pass
-                import_paths.append(configured_path)
+            if python_path:
+                import_paths.extend(
+                    path for path in python_path.split(os.pathsep) if path
+                )
+        elif python_path is not None:
+            # The pytest wrapper imports the trusted runtime dependency before
+            # restoring user paths. This prevents any inherited path (including
+            # a relative "." interpreted in the child cwd) from shadowing pytest
+            # without breaking src-layout projects that rely on PYTHONPATH.
+            environment[DEFERRED_PYTHONPATH_ENV] = python_path
         environment["PYTHONPATH"] = os.pathsep.join(import_paths)
 
         # Native process startup is blocking, so keep it off the event loop.

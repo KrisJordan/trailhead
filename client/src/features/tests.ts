@@ -18,6 +18,7 @@ export interface CollectedTest {
     path?: string;
     line?: number;
     markers?: string[];
+    truncated?: string[];
 }
 
 export interface CapturedTestOutput {
@@ -40,6 +41,7 @@ export interface TestPhaseResult extends CapturedTestOutput {
     outcome: TestOutcome;
     duration?: number;
     failure?: TestFailure;
+    reason?: string;
     message?: string;
     longrepr?: string;
     truncated?: string[];
@@ -57,6 +59,7 @@ export interface TestResult extends CapturedTestOutput {
     phases?: TestPhaseResult[];
     failure?: TestFailure;
     longrepr?: string;
+    truncated?: string[];
 }
 
 export type TestSummary = Record<string, number>;
@@ -68,6 +71,7 @@ export interface TestRunError {
     phase?: TestPhase;
     path?: string;
     line?: number;
+    truncated?: string[];
 }
 
 export type TestSessionStatus =
@@ -171,6 +175,7 @@ const testsSlice = createSlice({
             state.requestedNodeIds = null;
             state.status = "collecting";
             state.error = null;
+            state.results = {};
             state.summary = null;
             state.duration = null;
             state.exitCode = null;
@@ -203,9 +208,6 @@ const testsSlice = createSlice({
                 state.collected = Array.from(byNodeId.values());
             } else {
                 state.collected = action.payload.tests;
-            }
-            if (state.status === "collecting") {
-                state.status = "ready";
             }
         },
         testRunRequested(
@@ -265,6 +267,25 @@ const testsSlice = createSlice({
             ) {
                 return;
             }
+            if (
+                action.payload.result.node_id
+                && !state.collected.some(
+                    (test) =>
+                        test.node_id === action.payload.result.node_id,
+                )
+            ) {
+                const result = action.payload.result;
+                const nodeParts = result.node_id.split("::");
+                state.collected.push({
+                    node_id: result.node_id,
+                    name: result.name
+                        ?? nodeParts[nodeParts.length - 1],
+                    path: result.path,
+                    line: result.line,
+                    markers: result.markers,
+                    truncated: result.truncated,
+                });
+            }
             state.results[action.payload.result.node_id] =
                 action.payload.result;
         },
@@ -301,11 +322,14 @@ const testsSlice = createSlice({
                 return;
             }
             state.error = action.payload.error;
-            if (
+            const terminalRejection =
+                action.payload.error.kind === "validation";
+            const operationAlreadyIdle = (
                 state.status !== "collecting"
                 && state.status !== "running"
                 && state.status !== "cancelling"
-            ) {
+            );
+            if (terminalRejection || operationAlreadyIdle) {
                 state.status = "error";
                 state.requestedNodeIds = null;
             }

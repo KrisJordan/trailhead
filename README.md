@@ -95,6 +95,24 @@ another directory, activate the environment or use the absolute `trailhead`
 executable and pass an absolute project path to `--root`. Use `--host 0.0.0.0`
 only when Trailhead intentionally needs to be reachable from other machines.
 
+## Run pytest modules in the browser
+
+Trailhead recognizes standard pytest module names (`test_*.py` and
+`*_test.py`) as well as modules with top-level `test_*` functions or `Test*`
+classes. Opening one selects a **Tests** tab that collects the module's tests
+and provides controls to run one test, run the full module, or cancel an active
+run. Parametrized cases retain their exact pytest node IDs.
+
+Failures distinguish collection, fixture setup, test call, and fixture teardown
+errors. Assertion details and captured standard output, standard error, and logs
+are available directly in each test result.
+
+The **Autorun on changes** toggle is off by default and is saved in the browser.
+When enabled, changes to any Python file in the project schedule a debounced
+rerun of the open test module. Changes detected during an active run are
+coalesced into one follow-up run, and repeated rapid reruns automatically pause
+autorun to prevent loops from tests that write Python source files.
+
 ## Network access and browser origins
 
 Trailhead runs arbitrary Python from the selected project and does not provide

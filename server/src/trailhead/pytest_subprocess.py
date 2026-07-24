@@ -23,6 +23,22 @@ _CHILD_EVENT_TYPES = {
 }
 
 
+def _exit_status(return_code: int | None) -> tuple[str, str]:
+    """Return the terminal status and diagnostic kind for a child exit."""
+
+    return {
+        0: ("passed", "internal"),
+        1: ("failed", "test"),
+        2: ("interrupted", "internal"),
+        3: ("internal_error", "internal"),
+        4: ("usage_error", "usage"),
+        5: ("no_tests", "usage"),
+    }.get(
+        return_code if return_code is not None else -1,
+        ("internal_error", "internal"),
+    )
+
+
 class AsyncPytestSubprocess(AsyncPythonSubprocess):
     """Decode structured child events without duplicating process management."""
 
@@ -51,6 +67,7 @@ class AsyncPytestSubprocess(AsyncPythonSubprocess):
         self._finish_data: dict[str, Any] | None = None
         self._cancelled = False
         self._unexpected_output = ""
+        self._saw_error = False
         self._started = asyncio.Event()
         self.collected_node_ids: set[str] = set()
 
@@ -92,6 +109,8 @@ class AsyncPytestSubprocess(AsyncPythonSubprocess):
         if prefix_index < 0:
             self._remember_unexpected(output)
             return
+        if prefix_index:
+            self._remember_unexpected(output[:prefix_index])
         await self._started.wait()
         try:
             event = json.loads(output[prefix_index + len(EVENT_PREFIX) :])
@@ -119,6 +138,12 @@ class AsyncPytestSubprocess(AsyncPythonSubprocess):
                     for test in tests
                     if isinstance(test, dict) and isinstance(test.get("node_id"), str)
                 }
+        elif event_type == "TEST_RESULT":
+            test = data.get("test")
+            if isinstance(test, dict) and isinstance(test.get("node_id"), str):
+                self.collected_node_ids.add(test["node_id"])
+        elif event_type == "TEST_ERROR":
+            self._saw_error = True
         await self._send(event_type, data)
 
     async def _handle_stderr(
@@ -129,21 +154,68 @@ class AsyncPytestSubprocess(AsyncPythonSubprocess):
 
     async def _handle_exit(self, process: subprocess.Popen[bytes]) -> None:
         if self._finish_data is not None:
-            await self._send("TEST_RUN_FINISHED", self._finish_data)
+            finish_data = dict(self._finish_data)
+            reported_exit_code = finish_data.get("exit_code")
+            actual_exit_code = process.returncode
+            if self._cancelled:
+                finish_data.update(
+                    {
+                        "exit_code": actual_exit_code,
+                        "status": "cancelled",
+                        "cancelled": True,
+                    }
+                )
+            elif reported_exit_code != actual_exit_code:
+                status, error_kind = _exit_status(actual_exit_code)
+                await self._send(
+                    "TEST_ERROR",
+                    {
+                        "kind": error_kind,
+                        "message": (
+                            "Pytest exited after its session report with "
+                            f"status {actual_exit_code}"
+                        ),
+                        "details": (
+                            "The final process exit code did not match pytest's "
+                            f"session result ({reported_exit_code})."
+                        ),
+                    },
+                )
+                finish_data.update(
+                    {
+                        "exit_code": actual_exit_code,
+                        "status": status,
+                        "cancelled": False,
+                    }
+                )
+            elif not self._saw_error and finish_data.get("status") in {
+                "internal_error",
+                "interrupted",
+                "usage_error",
+            }:
+                details, was_truncated = limited_text(self._unexpected_output)
+                _, error_kind = _exit_status(actual_exit_code)
+                await self._send(
+                    "TEST_ERROR",
+                    {
+                        "kind": error_kind,
+                        "message": (
+                            "Pytest could not complete the requested operation"
+                        ),
+                        "details": details,
+                        "truncated": ["details"] if was_truncated else [],
+                    },
+                )
+            await self._send("TEST_RUN_FINISHED", finish_data)
             self._finished = True
             return
 
         return_code = process.returncode
-        exit_statuses = {
-            2: ("interrupted", "internal"),
-            3: ("internal_error", "internal"),
-            4: ("usage_error", "usage"),
-            5: ("no_tests", "usage"),
-        }
-        status, error_kind = exit_statuses.get(
-            return_code if return_code is not None else -1,
-            ("internal_error", "internal"),
-        )
+        status, error_kind = _exit_status(return_code)
+        if return_code in {0, 1}:
+            # A normal pass/fail always comes with the plugin's structured
+            # terminal record. Exiting without it is a protocol failure.
+            status, error_kind = "internal_error", "internal"
         if not self._cancelled:
             details, was_truncated = limited_text(self._unexpected_output)
             await self._send(

@@ -52,6 +52,7 @@ describe("tests reducer", () => {
                 tests: [collected("test_example.py::test_before_error")],
             }),
         );
+        expect(state.status).toBe("collecting");
         state = reducer(
             state,
             testRunFinished({
@@ -69,6 +70,31 @@ describe("tests reducer", () => {
         });
         expect(state.collected).toHaveLength(1);
         expect(state.exitCode).toBe(2);
+    });
+
+    it("leaves a rejected command in an actionable error state", () => {
+        let state = reducer(
+            undefined,
+            startTestSession({ module: "test_example" }),
+        );
+        state = reducer(
+            state,
+            testRunRequested({ run_id: "run-1" }),
+        );
+        state = reducer(
+            state,
+            testRunFailed({
+                run_id: "run-1",
+                error: {
+                    kind: "validation",
+                    message: "Selected tests must come from the latest collection",
+                },
+            }),
+        );
+
+        expect(state.status).toBe("error");
+        expect(state.requestedNodeIds).toBeNull();
+        expect(state.error?.message).toContain("latest collection");
     });
 
     it("does not replace the full collection during a run-one request", () => {
@@ -115,6 +141,116 @@ describe("tests reducer", () => {
             "test_example.py::test_two",
         ]);
         expect(state.collected[0].name).toBe("test_one[updated]");
+    });
+
+    it("refreshes the full collection during a run-all request", () => {
+        let state = reducer(
+            undefined,
+            startTestSession({ module: "test_example" }),
+        );
+        state = reducer(
+            state,
+            testCollectionRequested({ run_id: "collect-1" }),
+        );
+        state = reducer(
+            state,
+            testsCollected({
+                run_id: "collect-1",
+                tests: [collected("test_example.py::test_old", "test_old")],
+            }),
+        );
+        state = reducer(
+            state,
+            testRunRequested({ run_id: "run-all" }),
+        );
+        state = reducer(
+            state,
+            testsCollected({
+                run_id: "run-all",
+                tests: [collected("test_example.py::test_new", "test_new")],
+            }),
+        );
+
+        expect(state.collected).toEqual([
+            collected("test_example.py::test_new", "test_new"),
+        ]);
+    });
+
+    it("clears stale results when a new collection starts", () => {
+        let state = reducer(
+            undefined,
+            startTestSession({ module: "test_example" }),
+        );
+        state = reducer(
+            state,
+            testRunRequested({ run_id: "run-1" }),
+        );
+        state = reducer(
+            state,
+            testResultReceived({
+                run_id: "run-1",
+                result: {
+                    node_id: "test_example.py::test_old",
+                    outcome: "failed",
+                },
+            }),
+        );
+        state = reducer(
+            state,
+            testRunFinished({
+                run_id: "run-1",
+                summary: { total: 1, failed: 1 },
+                exit_code: 1,
+                status: "failed",
+            }),
+        );
+
+        state = reducer(
+            state,
+            testCollectionRequested({ run_id: "collect-2" }),
+        );
+
+        expect(state.status).toBe("collecting");
+        expect(state.results).toEqual({});
+        expect(state.summary).toBeNull();
+        expect(state.exitCode).toBeNull();
+        expect(state.finishStatus).toBeNull();
+    });
+
+    it("adds a visible row for a result omitted from the collection", () => {
+        let state = reducer(
+            undefined,
+            startTestSession({ module: "test_example" }),
+        );
+        state = reducer(
+            state,
+            testRunRequested({ run_id: "run-1" }),
+        );
+        state = reducer(
+            state,
+            testResultReceived({
+                run_id: "run-1",
+                result: {
+                    node_id: "test_example.py::test_hidden[param]",
+                    name: "test_hidden[param]",
+                    path: "test_example.py",
+                    line: 17,
+                    markers: ["parametrize"],
+                    outcome: "failed",
+                },
+            }),
+        );
+
+        expect(state.collected).toContainEqual({
+            node_id: "test_example.py::test_hidden[param]",
+            name: "test_hidden[param]",
+            path: "test_example.py",
+            line: 17,
+            markers: ["parametrize"],
+        });
+        expect(
+            state.results["test_example.py::test_hidden[param]"].outcome,
+        ).toBe("failed");
     });
 
     it("ignores every result event from a stale run", () => {

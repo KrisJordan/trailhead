@@ -10,10 +10,15 @@ from typing import Any
 
 import pytest
 
-from .pytest_protocol import limited_text
+from .pytest_protocol import (
+    MAX_METADATA_BYTES,
+    MAX_NODE_ID_BYTES,
+    limited_text,
+)
 
 EventEmitter = Callable[[str, dict[str, Any]], None]
 MAX_COLLECTION_BYTES = 512 * 1024
+MAX_MARKERS = 256
 
 
 def _portable_path(value: object) -> str:
@@ -36,6 +41,107 @@ def _location(value: object) -> tuple[str | None, int | None]:
     path = _portable_path(value[0])
     line = value[1]
     return path, line + 1 if isinstance(line, int) else None
+
+
+def _bounded_optional_text(
+    value: object | None, limit: int = MAX_METADATA_BYTES
+) -> tuple[str | None, bool]:
+    """Bound optional browser metadata without changing a missing value."""
+
+    if value is None:
+        return None, False
+    return limited_text(value, limit)
+
+
+def _is_safe_node_id(node_id: object) -> bool:
+    """Return whether an opaque node ID can be carried losslessly."""
+
+    return (
+        isinstance(node_id, str)
+        and bool(node_id)
+        and len(node_id.encode("utf-8", errors="replace")) <= MAX_NODE_ID_BYTES
+    )
+
+
+def _bounded_markers(item: pytest.Item) -> tuple[list[str], bool]:
+    """Return marker names with bounded count and combined serialized size."""
+
+    markers: list[str] = []
+    seen: set[str] = set()
+    encoded_size = len(b"[]")
+    truncated = False
+    for index, mark in enumerate(item.iter_markers()):
+        if index >= MAX_MARKERS:
+            truncated = True
+            break
+        name, name_truncated = limited_text(mark.name, MAX_METADATA_BYTES)
+        if name in seen:
+            continue
+        encoded_name = json.dumps(
+            name, ensure_ascii=False, separators=(",", ":")
+        ).encode("utf-8")
+        next_size = encoded_size + len(encoded_name) + (1 if markers else 0)
+        if next_size > MAX_METADATA_BYTES:
+            truncated = True
+            break
+        markers.append(name)
+        seen.add(name)
+        encoded_size = next_size
+        if name_truncated:
+            truncated = True
+            break
+    return sorted(markers), truncated
+
+
+def _test_metadata(item: pytest.Item, node_id: str) -> dict[str, Any]:
+    """Build bounded display metadata around an exact, safe node ID."""
+
+    path, line = _location(item.location)
+    name, name_truncated = limited_text(item.name, MAX_METADATA_BYTES)
+    path, path_truncated = _bounded_optional_text(path)
+    markers, markers_truncated = _bounded_markers(item)
+    truncated = [
+        field
+        for field, was_truncated in (
+            ("name", name_truncated),
+            ("path", path_truncated),
+            ("markers", markers_truncated),
+        )
+        if was_truncated
+    ]
+    return {
+        "node_id": node_id,
+        "name": name,
+        "path": path,
+        "line": line,
+        "markers": markers,
+        "truncated": truncated,
+    }
+
+
+def _fallback_test_metadata(
+    node_id: str, location: tuple[str | Path, int, str]
+) -> dict[str, Any]:
+    """Build bounded metadata if pytest did not expose the item at collection."""
+
+    path, line = _location(location)
+    name, name_truncated = limited_text(node_id.rsplit("::", 1)[-1], MAX_METADATA_BYTES)
+    path, path_truncated = _bounded_optional_text(path)
+    return {
+        "node_id": node_id,
+        "name": name,
+        "path": path,
+        "line": line,
+        "markers": [],
+        "truncated": [
+            field
+            for field, was_truncated in (
+                ("name", name_truncated),
+                ("path", path_truncated),
+            )
+            if was_truncated
+        ],
+    }
 
 
 def _longrepr_text(report: pytest.TestReport) -> str:
@@ -121,6 +227,16 @@ def _phase(
         normalized[name] = text
         if was_truncated:
             truncated.append(name)
+    path, path_truncated = _bounded_optional_text(path)
+    reason, reason_truncated = limited_text(
+        getattr(report, "wasxfail", "")
+        or (normalized["message"] if report.skipped else ""),
+        MAX_METADATA_BYTES,
+    )
+    if path_truncated:
+        truncated.append("path")
+    if reason_truncated:
+        truncated.append("reason")
 
     return {
         "phase": report.when,
@@ -130,10 +246,7 @@ def _phase(
         "longrepr": normalized["longrepr"],
         "path": path,
         "line": line,
-        "reason": str(
-            getattr(report, "wasxfail", "")
-            or (normalized["message"] if report.skipped else "")
-        ),
+        "reason": reason,
         "stdout": normalized["stdout"],
         "stderr": normalized["stderr"],
         "log": normalized["log"],
@@ -161,9 +274,18 @@ def _aggregate_outcome(phases: list[dict[str, Any]]) -> str:
 class TrailheadPytestPlugin:
     """Collect and publish pytest data without parsing terminal output."""
 
-    def __init__(self, emit: EventEmitter, mode: str) -> None:
+    def __init__(
+        self,
+        emit: EventEmitter,
+        mode: str,
+        *,
+        emit_collection: bool | None = None,
+    ) -> None:
         self._emit = emit
         self._mode = mode
+        self._emit_collection = (
+            mode == "collect" if emit_collection is None else emit_collection
+        )
         self._started_at = time.monotonic()
         self._tests: dict[str, dict[str, Any]] = {}
         self._reports: dict[str, list[pytest.TestReport]] = {}
@@ -178,44 +300,82 @@ class TrailheadPytestPlugin:
         }
         self._collection_errors = 0
         self._collection_truncated = False
+        self._collection_display_truncated = False
+        self._unsafe_node_id_diagnostic_emitted = False
         self._internal_error = False
+        self._finished = False
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:
         tests: list[dict[str, Any]] = []
-        encoded_size = 0
+        encoded_size = len(b"[]")
+        display_budget_exhausted = False
+        unsafe_node_ids = 0
         for item in session.items:
-            path, line = _location(item.location)
-            test = {
-                "node_id": item.nodeid,
-                "name": item.name,
-                "path": path,
-                "line": line,
-                "markers": sorted({mark.name for mark in item.iter_markers()}),
-            }
-            self._tests[item.nodeid] = test
-            encoded_size += len(json.dumps(test, ensure_ascii=False).encode("utf-8"))
-            if encoded_size > MAX_COLLECTION_BYTES:
-                self._collection_truncated = True
-                self._emit(
-                    "TEST_ERROR",
-                    {
-                        "kind": "collection",
-                        "message": (
-                            "The collected test list is too large to display completely"
-                        ),
-                    },
-                )
-                break
+            node_id = item.nodeid
+            if not _is_safe_node_id(node_id):
+                unsafe_node_ids += 1
+                self._collection_display_truncated = True
+                continue
+
+            test = _test_metadata(item, node_id)
+            # Keep bounded metadata for every individually safe test so a run
+            # result can still be displayed even when the collection list is
+            # too large to send as one event.
+            self._tests[node_id] = test
+            if display_budget_exhausted:
+                continue
+            encoded_test = json.dumps(
+                test, ensure_ascii=False, separators=(",", ":")
+            ).encode("utf-8")
+            next_size = encoded_size + len(encoded_test) + (1 if tests else 0)
+            if next_size > MAX_COLLECTION_BYTES:
+                self._collection_display_truncated = True
+                display_budget_exhausted = True
+                continue
             tests.append(test)
+            encoded_size = next_size
+
+        if unsafe_node_ids:
+            noun = "test has" if unsafe_node_ids == 1 else "tests have"
+            pronoun = "Its" if unsafe_node_ids == 1 else "Their"
+            result_noun = "result" if unsafe_node_ids == 1 else "results"
+            self._emit(
+                "TEST_ERROR",
+                {
+                    "kind": "collection",
+                    "message": (
+                        f"{unsafe_node_ids} collected {noun} a node ID larger than "
+                        f"the {MAX_NODE_ID_BYTES}-byte protocol limit. {pronoun} "
+                        f"individual {result_noun} will be omitted."
+                    ),
+                },
+            )
+            self._unsafe_node_id_diagnostic_emitted = True
+        if display_budget_exhausted:
+            self._emit(
+                "TEST_ERROR",
+                {
+                    "kind": "collection",
+                    "message": (
+                        "The collected test list is too large to display completely"
+                    ),
+                },
+            )
+
+        # Collection-only operations should surface display truncation as their
+        # terminal status. A real run must retain pytest's passed/failed status.
+        self._collection_truncated = (
+            self._mode == "collect" and self._collection_display_truncated
+        )
         self._summary["total"] = len(session.items)
-        if self._mode == "collect":
+        if self._emit_collection:
             self._emit(
                 "TESTS_COLLECTED",
                 {
                     "tests": tests,
                     "total": len(session.items),
-                    "truncated": self._collection_truncated,
+                    "truncated": self._collection_display_truncated,
                 },
             )
 
@@ -226,6 +386,7 @@ class TrailheadPytestPlugin:
         self._collection_errors += 1
         longrepr, was_truncated = limited_text(report.longrepr)
         path, line = _location(getattr(report, "location", None))
+        path, path_truncated = _bounded_optional_text(path)
         message = next(
             (candidate for candidate in reversed(longrepr.splitlines()) if candidate),
             "Unable to collect tests",
@@ -238,7 +399,14 @@ class TrailheadPytestPlugin:
                 "path": path,
                 "line": line,
                 "details": longrepr,
-                "truncated": ["details"] if was_truncated else [],
+                "truncated": [
+                    field
+                    for field, truncated in (
+                        ("details", was_truncated),
+                        ("path", path_truncated),
+                    )
+                    if truncated
+                ],
             },
         )
 
@@ -259,18 +427,22 @@ class TrailheadPytestPlugin:
         phases = [_phase(report, previous_capture) for report in reports]
         outcome = _aggregate_outcome(phases)
         self._summary[outcome] += 1
-        test = dict(
-            self._tests.get(
-                nodeid,
-                {
-                    "node_id": nodeid,
-                    "name": nodeid.rsplit("::", 1)[-1],
-                    "path": _location(location)[0],
-                    "line": _location(location)[1],
-                    "markers": [],
-                },
-            )
-        )
+        if not _is_safe_node_id(nodeid):
+            if not self._unsafe_node_id_diagnostic_emitted:
+                self._emit(
+                    "TEST_ERROR",
+                    {
+                        "kind": "collection",
+                        "message": (
+                            "A pytest result was omitted because its node ID "
+                            f"exceeds the {MAX_NODE_ID_BYTES}-byte protocol limit."
+                        ),
+                    },
+                )
+                self._unsafe_node_id_diagnostic_emitted = True
+            return
+
+        test = dict(self._tests.get(nodeid, _fallback_test_metadata(nodeid, location)))
         test.update(
             {
                 "outcome": outcome,
@@ -287,23 +459,33 @@ class TrailheadPytestPlugin:
         excinfo: pytest.ExceptionInfo[BaseException],
     ) -> None:
         self._internal_error = True
-        details, was_truncated = limited_text(excrepr)
+        details, details_truncated = limited_text(excrepr)
+        message, message_truncated = limited_text(excinfo.value)
         self._emit(
             "TEST_ERROR",
             {
                 "kind": "internal",
-                "message": str(excinfo.value),
+                "message": message,
                 "details": details,
-                "truncated": ["details"] if was_truncated else [],
+                "truncated": [
+                    field
+                    for field, truncated in (
+                        ("message", message_truncated),
+                        ("details", details_truncated),
+                    )
+                    if truncated
+                ],
             },
         )
 
-    @pytest.hookimpl
-    def pytest_sessionfinish(
-        self, session: pytest.Session, exitstatus: int | pytest.ExitCode
-    ) -> None:
+    def finish(self, exitstatus: int | pytest.ExitCode) -> None:
+        """Emit the sole terminal event after ``pytest.main`` has returned."""
+
+        if self._finished:
+            return
+        self._finished = True
         exit_code = int(exitstatus)
-        if self._internal_error:
+        if self._internal_error or exit_code == int(pytest.ExitCode.INTERNAL_ERROR):
             status = "internal_error"
         elif self._collection_errors:
             status = "collection_error"
@@ -329,5 +511,6 @@ class TrailheadPytestPlugin:
                 "duration": time.monotonic() - self._started_at,
                 "summary": self._summary,
                 "cancelled": False,
+                "collection_truncated": self._collection_display_truncated,
             },
         )

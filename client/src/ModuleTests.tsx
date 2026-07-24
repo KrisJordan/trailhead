@@ -170,7 +170,22 @@ function CapturedOutput({
     );
 }
 
-function PhaseFailure({
+function phasePanelClasses(outcome: TestOutcome): string {
+    switch (outcome) {
+        case "failed":
+        case "error":
+            return "border-error/40 bg-error/5";
+        case "skipped":
+        case "xpassed":
+            return "border-warning/40 bg-warning/5";
+        case "xfailed":
+            return "border-info/40 bg-info/5";
+        default:
+            return "border-base-300 bg-base-200/30";
+    }
+}
+
+function PhaseDetail({
     phase,
     result,
 }: {
@@ -178,11 +193,18 @@ function PhaseFailure({
     result: TestResult;
 }) {
     const failure = phase.failure;
-    const message = failure?.message ?? phase.message;
+    const isFailure = phase.outcome === "failed"
+        || phase.outcome === "error";
+    const message = isFailure
+        ? failure?.message ?? phase.message
+        : phase.reason ?? phase.message ?? failure?.message;
     const longrepr = failure?.longrepr ?? phase.longrepr;
     const traceback = failure?.traceback;
     const path = failure?.path ?? result.path;
     const line = failure?.line ?? result.line;
+    const truncatedDetails = phase.truncated?.filter(
+        (field) => !["stdout", "stderr", "log"].includes(field),
+    ) ?? [];
 
     if (
         phase.outcome !== "failed"
@@ -195,10 +217,20 @@ function PhaseFailure({
     }
 
     return (
-        <section className="rounded-box border border-error/40 bg-error/5 p-4">
+        <section
+            className={`rounded-box border p-4 ${phasePanelClasses(phase.outcome)}`}
+        >
             <div className="mb-2 flex flex-wrap items-center gap-2">
                 <StatusBadge outcome={phase.outcome} />
                 <h4 className="font-bold capitalize">{phase.phase} phase</h4>
+                {truncatedDetails.length > 0 && (
+                    <span
+                        className="badge badge-warning badge-sm"
+                        title={`Truncated fields: ${truncatedDetails.join(", ")}`}
+                    >
+                        details truncated
+                    </span>
+                )}
                 {(path || line !== undefined) && (
                     <code className="text-xs opacity-75">
                         {path ?? result.node_id}
@@ -236,7 +268,7 @@ function PhaseFailure({
     );
 }
 
-function ResultDetails({ result }: { result: TestResult }) {
+export function ResultDetails({ result }: { result: TestResult }) {
     const phases = result.phases ?? [];
     const directFailure: TestPhaseResult | null = (
         result.failure
@@ -250,9 +282,10 @@ function ResultDetails({ result }: { result: TestResult }) {
             longrepr: result.longrepr,
         }
         : null;
-    const failurePhases = phases.filter((phase) => (
+    const detailPhases = phases.filter((phase) => (
         phase.outcome === "failed"
         || phase.outcome === "error"
+        || Boolean(phase.reason)
         || Boolean(phase.message)
         || Boolean(phase.longrepr)
         || Boolean(phase.failure)
@@ -289,19 +322,24 @@ function ResultDetails({ result }: { result: TestResult }) {
                     ))}
                 </div>
             )}
-            {(failurePhases.length > 0
-                ? failurePhases
+            {(detailPhases.length > 0
+                ? detailPhases
                 : directFailure ? [directFailure] : []
             ).map((phase) => (
-                <PhaseFailure
+                <PhaseDetail
                     key={`${phase.phase}-${phase.outcome}`}
                     phase={phase}
                     result={result}
                 />
             ))}
-            {hasDirectOutput && <CapturedOutput output={result} />}
+            {hasDirectOutput && (
+                <CapturedOutput
+                    output={result}
+                    truncated={result.truncated}
+                />
+            )}
             {phases.map((phase) => {
-                const alreadyShown = failurePhases.includes(phase);
+                const alreadyShown = detailPhases.includes(phase);
                 const hasOutput = Boolean(
                     phase.stdout || phase.stderr || phase.log,
                 );
@@ -326,14 +364,27 @@ function ResultDetails({ result }: { result: TestResult }) {
     );
 }
 
-function ErrorPanel({ error }: { error: TestRunError }) {
+export function ErrorPanel({ error }: { error: TestRunError }) {
     const heading = error.kind === "collection"
         ? "Test collection failed"
         : "pytest could not complete the request";
+    const truncatedDiagnostic = error.truncated?.filter(
+        (field) => field !== "details",
+    ) ?? [];
     return (
         <div role="alert" className="alert alert-error items-start text-white">
             <div>
-                <h3 className="font-bold">{heading}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-bold">{heading}</h3>
+                    {truncatedDiagnostic.length > 0 && (
+                        <span
+                            className="badge badge-warning badge-sm"
+                            title={`Truncated fields: ${truncatedDiagnostic.join(", ")}`}
+                        >
+                            diagnostic truncated
+                        </span>
+                    )}
+                </div>
                 {(error.path || error.line !== undefined) && (
                     <code className="mb-2 block text-sm">
                         {error.path}
@@ -342,11 +393,66 @@ function ErrorPanel({ error }: { error: TestRunError }) {
                 )}
                 <p className="whitespace-pre-wrap">{error.message}</p>
                 {error.details && (
-                    <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words rounded bg-neutral p-3 text-sm text-neutral-content">
-                        {error.details}
-                    </pre>
+                    <div className="mt-2">
+                        <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
+                            Details
+                            {error.truncated?.includes("details") && (
+                                <span className="badge badge-warning badge-sm">
+                                    truncated
+                                </span>
+                            )}
+                        </div>
+                        <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded bg-neutral p-3 text-sm text-neutral-content">
+                            {error.details}
+                        </pre>
+                    </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+const successfulFinishStatuses = new Set(["passed", "collected"]);
+const warningFinishStatuses = new Set([
+    "cancelled",
+    "collection_truncated",
+    "interrupted",
+    "no_tests",
+]);
+
+export function TerminalStatus({
+    finishStatus,
+    exitCode,
+}: {
+    finishStatus: string | null;
+    exitCode: number | null;
+}) {
+    const successful = (
+        exitCode === null
+        || exitCode === 0
+    ) && (
+        finishStatus === null
+        || successfulFinishStatuses.has(finishStatus)
+    );
+    if (successful) {
+        return null;
+    }
+
+    const displayStatus = finishStatus
+        ? finishStatus.replaceAll("_", " ")
+        : "unknown error";
+    const warning = finishStatus !== null
+        && warningFinishStatuses.has(finishStatus);
+    return (
+        <div
+            className={`alert ${warning ? "alert-warning" : "alert-error text-white"}`}
+            role="alert"
+        >
+            <span>
+                pytest finished with status{" "}
+                <strong>{displayStatus}</strong>
+                {exitCode !== null && ` (exit code ${exitCode})`}.
+            </span>
         </div>
     );
 }
@@ -380,6 +486,14 @@ function TestRow({
                         <h3 className="break-all font-mono font-semibold">
                             {test.name}
                         </h3>
+                        {test.truncated && test.truncated.length > 0 && (
+                            <span
+                                className="badge badge-warning badge-sm"
+                                title={`Truncated fields: ${test.truncated.join(", ")}`}
+                            >
+                                metadata truncated
+                            </span>
+                        )}
                         {duration && (
                             <span className="text-xs opacity-60">
                                 {duration}
@@ -562,6 +676,10 @@ export function ModuleTests() {
                 </div>
             )}
             {tests.error && <ErrorPanel error={tests.error} />}
+            <TerminalStatus
+                exitCode={tests.exitCode}
+                finishStatus={tests.finishStatus}
+            />
             {summary && (
                 <Summary
                     cancelled={tests.cancelled}

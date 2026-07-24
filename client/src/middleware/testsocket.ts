@@ -117,6 +117,16 @@ function normalizeMarkers(value: unknown): string[] | undefined {
     return markers.length > 0 ? markers : undefined;
 }
 
+function normalizeStringArray(value: unknown): string[] | undefined {
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+    const values = value.filter(
+        (item): item is string => typeof item === "string",
+    );
+    return values.length > 0 ? values : undefined;
+}
+
 function normalizeCollectedTest(value: unknown): CollectedTest | null {
     const item = record(value);
     const nodeId = stringValue(item.node_id) ?? stringValue(item.nodeid);
@@ -134,6 +144,7 @@ function normalizeCollectedTest(value: unknown): CollectedTest | null {
         path: stringValue(item.path) ?? stringValue(location.path),
         line: numberValue(item.line) ?? numberValue(location.line),
         markers: normalizeMarkers(item.markers),
+        truncated: normalizeStringArray(item.truncated),
     };
 }
 
@@ -190,15 +201,12 @@ function normalizePhaseResult(value: unknown): TestPhaseResult | null {
         phase: phaseName,
         outcome: normalizeOutcome(phase.outcome),
         duration: numberValue(phase.duration),
+        reason: stringValue(phase.reason),
         message: stringValue(phase.message),
         longrepr: printable(phase.longrepr),
         failure: normalizeFailure(phase),
         ...normalizeCapturedOutput(phase),
-        truncated: Array.isArray(phase.truncated)
-            ? phase.truncated.filter(
-                (field): field is string => typeof field === "string",
-            )
-            : undefined,
+        truncated: normalizeStringArray(phase.truncated),
     };
 }
 
@@ -227,6 +235,7 @@ function normalizeTestResult(value: unknown): TestResult | null {
         phases,
         failure: normalizeFailure(result),
         longrepr: printable(result.longrepr),
+        truncated: normalizeStringArray(result.truncated),
         ...normalizeCapturedOutput(result),
     };
 }
@@ -249,6 +258,7 @@ function normalizeError(value: unknown): TestRunError {
             kind: stringValue(payload.kind),
             message: nestedError,
             details: stringValue(payload.details),
+            truncated: normalizeStringArray(payload.truncated),
         };
     }
     const source = Object.keys(record(nestedError)).length > 0
@@ -263,6 +273,9 @@ function normalizeError(value: unknown): TestRunError {
         phase: normalizePhase(source.phase),
         path: stringValue(source.path) ?? stringValue(payload.path),
         line: numberValue(source.line) ?? numberValue(payload.line),
+        truncated: normalizeStringArray(
+            source.truncated ?? payload.truncated,
+        ),
     };
 }
 
@@ -354,7 +367,8 @@ export const testsocketMiddlewareFactory =
         const runPendingAutorun = () => {
             const state = getState();
             if (
-                state.tests.autorunPending
+                autorunTimer === null
+                && state.tests.autorunPending
                 && state.tests.autorun
                 && !state.tests.autorunPaused
                 && state.tests.readyState === ReadyState.OPEN

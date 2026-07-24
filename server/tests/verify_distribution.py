@@ -17,15 +17,20 @@ REQUIRED_PACKAGE_FILES = {
     "trailhead/platform_process/_posix.py",
     "trailhead/platform_process/_protocol.py",
     "trailhead/platform_process/_windows.py",
+    "trailhead/pytest_plugin.py",
+    "trailhead/pytest_protocol.py",
+    "trailhead/pytest_subprocess.py",
+    "trailhead/pytest_websocket.py",
     "trailhead/wrappers/__init__.py",
     "trailhead/wrappers/module.py",
+    "trailhead/wrappers/pytest.py",
     "trailhead/wrappers/interact/__init__.py",
     "trailhead/static/index.html",
 }
 DISTRIBUTION_BASENAME = "trailhead_edu"
 
 
-def _wheel_entries(path: Path) -> tuple[set[str], str]:
+def _wheel_entries(path: Path) -> tuple[set[str], str, str]:
     with zipfile.ZipFile(path) as archive:
         names = set(archive.namelist())
         entry_points = "\n".join(
@@ -33,7 +38,12 @@ def _wheel_entries(path: Path) -> tuple[set[str], str]:
             for name in names
             if name.endswith(".dist-info/entry_points.txt")
         )
-    return names, entry_points
+        metadata = "\n".join(
+            archive.read(name).decode("utf-8")
+            for name in names
+            if name.endswith(".dist-info/METADATA")
+        )
+    return names, entry_points, metadata
 
 
 def _sdist_entries(path: Path) -> set[str]:
@@ -82,10 +92,12 @@ def verify(directory: Path) -> list[str]:
         )
 
     if len(wheels) == 1:
-        entries, entry_points = _wheel_entries(wheels[0])
+        entries, entry_points, metadata = _wheel_entries(wheels[0])
         errors.extend(_check_package_entries(entries, "", wheels[0].name))
         if "trailhead = trailhead.__main__:main" not in entry_points:
             errors.append(f"{wheels[0].name} has no trailhead console entry point")
+        if "Requires-Dist: pytest" not in metadata:
+            errors.append(f"{wheels[0].name} has no pytest runtime dependency")
 
     if len(sdists) == 1:
         entries = _sdist_entries(sdists[0])

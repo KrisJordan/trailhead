@@ -183,6 +183,7 @@ describe("pytest socket middleware", () => {
                     phase: "call",
                     outcome: "failed",
                     duration: 0.02,
+                    reason: "known defect",
                     message: "assert 1 == 2",
                     longrepr: "E assert 1 == 2",
                     stdout: "value was 1\n",
@@ -202,6 +203,7 @@ describe("pytest socket middleware", () => {
             duration: 0.02,
             phases: [{
                 phase: "call",
+                reason: "known defect",
                 message: "assert 1 == 2",
                 longrepr: "E assert 1 == 2",
                 stdout: "value was 1\n",
@@ -211,8 +213,39 @@ describe("pytest socket middleware", () => {
         });
     });
 
+    it("preserves truncation metadata from pytest errors", () => {
+        const { socket, store } = connectAndOpen();
+        const runId = store.getState().tests.activeRunId;
+
+        socket.emit("message", messageEvent("TEST_ERROR", {
+            run_id: runId,
+            kind: "collection",
+            message: "Collection output exceeded the limit",
+            details: "partial collection traceback",
+            truncated: ["details"],
+        }));
+
+        expect(store.getState().tests.error).toEqual({
+            kind: "collection",
+            message: "Collection output exceeded the limit",
+            details: "partial collection traceback",
+            phase: undefined,
+            path: undefined,
+            line: undefined,
+            truncated: ["details"],
+        });
+    });
+
     it("does not send a second operation while pytest is busy", () => {
         const { socket, store } = connectAndOpen();
+        const collectRunId = store.getState().tests.activeRunId;
+        socket.emit("message", messageEvent("TESTS_COLLECTED", {
+            run_id: collectRunId,
+            tests: [{
+                node_id: "test_example.py::test_value",
+                name: "test_value",
+            }],
+        }));
 
         store.dispatch({ type: "testsocket/run" });
         store.dispatch({ type: "testsocket/collect" });
@@ -280,6 +313,48 @@ describe("pytest socket middleware", () => {
         expect(socket.sent.filter(
             (message) => message.type === "TEST_RUN",
         )).toHaveLength(1);
+    });
+
+    it("waits for a newer debounce before consuming a queued autorun", () => {
+        vi.useFakeTimers();
+        const { socket, store } = connectAndOpen();
+        finishCurrentOperation(socket, store);
+        store.dispatch(setTestAutorun(true));
+
+        store.dispatch(projectPythonChanged({
+            kind: "file_modified",
+            path: "src/first.py",
+        }));
+        vi.advanceTimersByTime(400);
+
+        store.dispatch(projectPythonChanged({
+            kind: "file_modified",
+            path: "src/queued.py",
+        }));
+        vi.advanceTimersByTime(400);
+        expect(store.getState().tests.autorunPending).toBe(true);
+
+        store.dispatch(projectPythonChanged({
+            kind: "file_modified",
+            path: "src/newest.py",
+        }));
+        finishCurrentOperation(socket, store);
+
+        expect(socket.sent.filter(
+            (message) => message.type === "TEST_RUN",
+        )).toHaveLength(1);
+        expect(store.getState().tests.autorunPending).toBe(true);
+
+        vi.advanceTimersByTime(400);
+        expect(socket.sent.filter(
+            (message) => message.type === "TEST_RUN",
+        )).toHaveLength(2);
+        expect(store.getState().tests.autorunPending).toBe(false);
+
+        finishCurrentOperation(socket, store);
+        expect(socket.sent.filter(
+            (message) => message.type === "TEST_RUN",
+        )).toHaveLength(2);
     });
 
     it("cancels a pending debounce when autorun is disabled", () => {
