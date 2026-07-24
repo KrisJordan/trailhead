@@ -23,6 +23,7 @@ class UvicornOptions(TypedDict, total=False):
     host: str
     port: int
     log_level: str
+    access_log: bool
     reload: bool
     reload_dirs: list[str]
 
@@ -111,6 +112,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "host": args.host,
         "port": args.port,
         "log_level": args.log_level,
+        "access_log": args.log_level in {"debug", "trace"},
     }
     if args.reload:
         options.update(

@@ -37,6 +37,7 @@ def test_cli_passes_native_options_to_uvicorn(monkeypatch: Any, tmp_path: Path) 
         "host": "0.0.0.0",
         "port": 8765,
         "log_level": "debug",
+        "access_log": True,
     }
     assert os.environ[PROJECT_ROOT_ENV] == str(tmp_path.resolve())
 
@@ -52,6 +53,7 @@ def test_cli_reload_watches_server_source(monkeypatch: Any, tmp_path: Path) -> N
 
     assert main(["--root", str(tmp_path), "--reload"]) == 0
     assert call["port"] == 1110
+    assert call["access_log"] is False
     assert call["reload"] is True
     assert call["reload_dirs"] == [str(PACKAGE_DIR)]
 
