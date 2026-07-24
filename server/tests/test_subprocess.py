@@ -14,6 +14,7 @@ from starlette.websockets import WebSocketState
 
 from trailhead import _child_bootstrap
 from trailhead.async_python_subprocess import AsyncPythonSubprocess
+from trailhead.platform_process import ManagedProcess
 
 
 class RecordingSocket:
@@ -384,7 +385,7 @@ async def test_cancelling_start_cleans_up_the_started_process_tree(
     open_process_returned = threading.Event()
     release_open_process = threading.Event()
 
-    def delayed_open_process(environment: dict[str, str]) -> tuple[object, object]:
+    def delayed_open_process(environment: dict[str, str]) -> ManagedProcess:
         result = original_open_process(environment)
         open_process_returned.set()
         if not release_open_process.wait(timeout=10):

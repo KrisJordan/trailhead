@@ -28,7 +28,7 @@ jobs:
           cache-dependency-path: client/package-lock.json
 
       - name: Synchronize the locked Python environment
-        run: uv sync --project server --locked --python 3.12
+        run: uv sync --project server --locked --python 3.14
 
       - name: Verify the release tag and package version
         shell: bash

@@ -39,18 +39,17 @@ RUN mkdir -p /etc/apt/keyrings \
     && npm install -g npm@latest \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python 3.12
+# Install Python 3.14
 RUN add-apt-repository ppa:deadsnakes/ppa \
     && apt update \
     && apt install --yes \
-        python3.12 \
+        python3.14 \
         libpq-dev \
-        python3.12-dev \
-        python3.12-distutils \
+        python3.14-dev \
         libcairo2 \
     && rm -rf /var/lib/apt/lists* \
     && unlink /usr/bin/python3 \
-    && ln -s /usr/bin/python3.12 /usr/bin/python3
+    && ln -s /usr/bin/python3.14 /usr/bin/python3
 
 # Use a non-root user per https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
 ARG USERNAME=vscode

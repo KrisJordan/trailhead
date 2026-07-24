@@ -37,7 +37,7 @@ jobs:
             turtle/package-lock.json
 
       - name: Exercise native bootstrap workflow
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.14'
         run: python scripts/bootstrap.py
 
       - name: Synchronize Python package and development tools
@@ -52,7 +52,7 @@ jobs:
         run: npm run typecheck
 
       - name: Test browser client
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.14'
         working-directory: client
         run: npm test
 
@@ -61,7 +61,7 @@ jobs:
         run: npm run build
 
       - name: Build optional browser templates
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.14'
         run: |
           npm ci --prefix compstagram
           npm run build --prefix compstagram

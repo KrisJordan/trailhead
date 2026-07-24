@@ -9,7 +9,7 @@ devcontainer, Caddy, and Honcho are optional and are not part of the native setu
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js 22.12 or newer with npm (Node.js 24 LTS is recommended)
 
-uv installs the pinned Python 3.12 development runtime and manages the project
+uv installs the pinned Python 3.14 development runtime and manages the project
 environment from `server/uv.lock`. Node.js is needed to build or live-reload the
 browser client. Once the client has been built into the Python package, a normal
 Trailhead run only needs Python 3.11 or newer.
@@ -192,7 +192,7 @@ Python APIs that work across macOS, Windows, and Linux.
   ports to `scripts/dev.py`. For the built server, pass `--port`.
 - A page reports that browser assets are missing: run `npm ci --prefix client`
   followed by `npm run build --prefix client`.
-- uv cannot find a compatible Python: run `uv python install 3.12`, then rerun
+- uv cannot find a compatible Python: run `uv python install 3.14`, then rerun
   the bootstrap script.
 - To reset only the local Python environment, remove `server/.venv` and run
   `uv sync --project server --locked`. Client dependencies can be recreated at
