@@ -32,10 +32,14 @@ class AsyncPythonSubprocess:
         client: WebSocket,
         wrapper: str = "trailhead.wrappers.module",
         project_root: Path | None = None,
+        arguments: tuple[str, ...] = (),
+        include_project_import_path: bool = True,
     ):
         self._module = module
         self._client = client
         self._wrapper = wrapper
+        self._arguments = arguments
+        self._include_project_import_path = include_project_import_path
         self._project_root = (project_root or get_project_root()).resolve()
         self._process: subprocess.Popen[bytes] | None = None
         self._managed_process: ManagedProcess | None = None
@@ -57,6 +61,7 @@ class AsyncPythonSubprocess:
             str(_CHILD_BOOTSTRAP),
             self._wrapper,
             self._module,
+            *self._arguments,
         )
 
     async def start(self) -> int:
@@ -75,9 +80,20 @@ class AsyncPythonSubprocess:
         # searches the student's project before the installed Trailhead package,
         # so a project package named `trailhead` can shadow our wrappers.
         python_path = environment.get("PYTHONPATH")
-        import_paths = [str(_TRAILHEAD_IMPORT_ROOT), str(self._project_root)]
+        import_paths = [str(_TRAILHEAD_IMPORT_ROOT)]
+        if self._include_project_import_path:
+            import_paths.append(str(self._project_root))
         if python_path:
-            import_paths.append(python_path)
+            for configured_path in python_path.split(os.pathsep):
+                if not configured_path:
+                    continue
+                if not self._include_project_import_path:
+                    try:
+                        if Path(configured_path).resolve() == self._project_root:
+                            continue
+                    except OSError:
+                        pass
+                import_paths.append(configured_path)
         environment["PYTHONPATH"] = os.pathsep.join(import_paths)
 
         # Native process startup is blocking, so keep it off the event loop.
@@ -205,16 +221,7 @@ class AsyncPythonSubprocess:
                     break
                 process = self._process
                 if process is not None:
-                    await self._client.send_text(
-                        WebSocketEvent(
-                            type="STDOUT",
-                            data={
-                                "pid": process.pid,
-                                "data": output,
-                                "is_input_prompt": is_prompt,
-                            },
-                        ).model_dump_json()
-                    )
+                    await self._handle_stdout(output, is_prompt, process)
             except asyncio.CancelledError:
                 raise
             except Exception as error:
@@ -230,14 +237,8 @@ class AsyncPythonSubprocess:
 
                 process = self._process
                 if process is not None:
-                    await self._client.send_text(
-                        WebSocketEvent(
-                            type="STDERR",
-                            data={
-                                "pid": process.pid,
-                                "data": output.decode("utf-8", errors="replace"),
-                            },
-                        ).model_dump_json()
+                    await self._handle_stderr(
+                        output.decode("utf-8", errors="replace"), process
                     )
             except asyncio.CancelledError:
                 raise
@@ -268,9 +269,49 @@ class AsyncPythonSubprocess:
             await asyncio.gather(*pipe_tasks)
 
         if self.client_connected():
-            await self._client.send_text(
-                WebSocketEvent(
-                    type="EXIT",
-                    data={"pid": process.pid, "returncode": process.returncode},
-                ).model_dump_json()
-            )
+            await self._handle_exit(process)
+
+    async def _handle_stdout(
+        self,
+        output: str,
+        is_prompt: bool,
+        process: subprocess.Popen[bytes],
+    ) -> None:
+        """Relay one stdout record.
+
+        Specialized wrappers can override this hook while retaining the portable
+        process lifecycle and process-tree cleanup implemented by this class.
+        """
+
+        await self._client.send_text(
+            WebSocketEvent(
+                type="STDOUT",
+                data={
+                    "pid": process.pid,
+                    "data": output,
+                    "is_input_prompt": is_prompt,
+                },
+            ).model_dump_json()
+        )
+
+    async def _handle_stderr(
+        self, output: str, process: subprocess.Popen[bytes]
+    ) -> None:
+        """Relay one stderr record; specialized wrappers may override."""
+
+        await self._client.send_text(
+            WebSocketEvent(
+                type="STDERR",
+                data={"pid": process.pid, "data": output},
+            ).model_dump_json()
+        )
+
+    async def _handle_exit(self, process: subprocess.Popen[bytes]) -> None:
+        """Relay child completion; specialized wrappers may override."""
+
+        await self._client.send_text(
+            WebSocketEvent(
+                type="EXIT",
+                data={"pid": process.pid, "returncode": process.returncode},
+            ).model_dump_json()
+        )

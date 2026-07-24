@@ -23,6 +23,7 @@ from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from .web_socket_event import WebSocketEvent
+from .project import client_path
 
 NotifierFn = Callable[[WebSocketEvent], Coroutine[Any, Any, None]]
 
@@ -38,16 +39,23 @@ def FileObserver(path: str | os.PathLike[str], notifier: NotifierFn) -> BaseObse
         A watchdog observer instance that has started. It is the caller's responsibility
         to call stop() on the observer when it is no longer needed."""
     observer = Observer()
-    event_handler = _FileChangeHandler(notifier, asyncio.get_running_loop())
-    observer.schedule(event_handler, str(Path(path).resolve()), recursive=True)
+    root = Path(path).resolve()
+    event_handler = _FileChangeHandler(notifier, asyncio.get_running_loop(), root)
+    observer.schedule(event_handler, str(root), recursive=True)
     observer.start()
     return observer
 
 
 class _FileChangeHandler(FileSystemEventHandler):
-    def __init__(self, notifier: NotifierFn, loop: asyncio.AbstractEventLoop):
+    def __init__(
+        self,
+        notifier: NotifierFn,
+        loop: asyncio.AbstractEventLoop,
+        root: Path | None = None,
+    ):
         self._notify_func = notifier
         self._loop = loop
+        self._root = root.resolve() if root is not None else None
         self._ignored_directories = {
             ".git",
             ".mypy_cache",
@@ -58,34 +66,57 @@ class _FileChangeHandler(FileSystemEventHandler):
             "node_modules",
             "venv",
         }
-        self._cache = cachetools.TTLCache[str, float](maxsize=1000, ttl=0.5)
+        self._cache = cachetools.TTLCache[str, float](maxsize=1000, ttl=0.1)
 
-    def _event_filter(self, event: FileSystemEvent):
+    def _is_relevant_path(self, path: str, is_directory: bool) -> bool:
         # Splitting both separators also makes synthetic Windows-path tests
         # meaningful when they run on a Unix CI worker (and vice versa).
-        source_path = os.fsdecode(event.src_path)
-        path_parts = set(source_path.replace("\\", "/").split("/"))
+        path_parts = set(path.replace("\\", "/").split("/"))
         if path_parts & self._ignored_directories:
             return False
+        return is_directory or Path(path).suffix.casefold() == ".py"
 
+    def _event_filter(self, event: FileSystemEvent):
+        paths = [os.fsdecode(event.src_path)]
+        destination = getattr(event, "dest_path", None)
+        if destination:
+            paths.append(os.fsdecode(destination))
+        relevant_paths = [
+            path for path in paths if self._is_relevant_path(path, event.is_directory)
+        ]
+        if not relevant_paths:
+            return False
+
+        cache_key = "\0".join(relevant_paths)
         current_time = time.time()
-        last_time: float | None = self._cache.get(source_path)
+        last_time: float | None = self._cache.get(cache_key)
         if last_time is not None and current_time - last_time < self._cache.ttl:
             return False
 
-        if not event.is_directory and Path(source_path).suffix.casefold() == ".py":
-            self._cache[source_path] = current_time
-            return True
-        elif event.is_directory:
-            self._cache[source_path] = current_time
-            return True
-        return False
+        self._cache[cache_key] = current_time
+        return True
+
+    def _client_path(self, value: str | bytes) -> str:
+        path = Path(os.fsdecode(value))
+        if self._root is None:
+            return path.as_posix()
+        try:
+            return client_path(path, self._root)
+        except (OSError, ValueError):
+            return path.as_posix()
+
+    def _event_data(self, event: FileSystemEvent) -> dict[str, str]:
+        data = {"path": self._client_path(event.src_path)}
+        destination = getattr(event, "dest_path", None)
+        if destination:
+            data["dest_path"] = self._client_path(destination)
+        return data
 
     def on_created(self, event: FileSystemEvent):
         if self._event_filter(event):
             type = "directory" if event.is_directory else "file"
             ws_event = WebSocketEvent(
-                type=f"{type}_created", data={"path": os.fsdecode(event.src_path)}
+                type=f"{type}_created", data=self._event_data(event)
             )
             asyncio.run_coroutine_threadsafe(self._notify_func(ws_event), self._loop)
 
@@ -93,7 +124,7 @@ class _FileChangeHandler(FileSystemEventHandler):
         if self._event_filter(event):
             type = "directory" if event.is_directory else "file"
             ws_event = WebSocketEvent(
-                type=f"{type}_modified", data={"path": os.fsdecode(event.src_path)}
+                type=f"{type}_modified", data=self._event_data(event)
             )
             asyncio.run_coroutine_threadsafe(self._notify_func(ws_event), self._loop)
 
@@ -101,7 +132,7 @@ class _FileChangeHandler(FileSystemEventHandler):
         if self._event_filter(event):
             type = "directory" if event.is_directory else "file"
             ws_event = WebSocketEvent(
-                type=f"{type}_moved", data={"path": os.fsdecode(event.src_path)}
+                type=f"{type}_moved", data=self._event_data(event)
             )
             asyncio.run_coroutine_threadsafe(self._notify_func(ws_event), self._loop)
 
@@ -109,6 +140,6 @@ class _FileChangeHandler(FileSystemEventHandler):
         if self._event_filter(event):
             type = "directory" if event.is_directory else "file"
             ws_event = WebSocketEvent(
-                type=f"{type}_deleted", data={"path": os.fsdecode(event.src_path)}
+                type=f"{type}_deleted", data=self._event_data(event)
             )
             asyncio.run_coroutine_threadsafe(self._notify_func(ws_event), self._loop)

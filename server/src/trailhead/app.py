@@ -20,6 +20,7 @@ from .web_socket_event import WebSocketEvent
 from .async_python_subprocess import AsyncPythonSubprocess
 from .analysis.inspect import analyze_module, Module
 from .project import get_project_root, module_file
+from .pytest_websocket import pytest_websocket
 from .websocket_origin import (
     WebSocketOriginMiddleware,
     configured_websocket_origins,
@@ -136,6 +137,13 @@ async def repl_gui(module: str, client: WebSocket):
     """Start the graphical REPL protocol for a Python module."""
 
     await _run_module_process(module, client, "trailhead.wrappers.repl_gui")
+
+
+@app.websocket("/ws/{module}/tests")
+async def test_module(module: str, client: WebSocket):
+    """Collect and run pytest tests for one project module."""
+
+    await pytest_websocket(module, client)
 
 
 @app.websocket("/ws")

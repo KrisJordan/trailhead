@@ -29,6 +29,7 @@ dependencies = [
     "cachetools>=5.3,<7",
     "fastapi>=0.108,<1",
     "pydantic>=2.5,<3",
+    "pytest>=7.4,<10",
     "uvicorn>=0.25,<1",
     "watchdog>=3,<7",
     "websockets>=12,<17",
@@ -49,7 +50,6 @@ student = [
 [dependency-groups]
 dev = [
     "pyright>=1.1.411",
-    "pytest>=7.4",
     "pytest-asyncio>=0.23",
     "pytest-json-report>=1.5",
     "ruff>=0.9",

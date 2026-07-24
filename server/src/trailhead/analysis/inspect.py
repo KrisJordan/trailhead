@@ -3,6 +3,7 @@
 from _ast import AsyncFor
 import argparse
 import ast
+from pathlib import Path
 import tokenize
 from typing import Any, Dict
 from pydantic import BaseModel
@@ -28,6 +29,7 @@ class Module(BaseModel):
     top_level_calls: list[str]
     global_vars: Dict[str, Any]
     has_main_guard: bool = False
+    is_pytest_candidate: bool = False
 
 
 def main() -> None:
@@ -54,6 +56,7 @@ def analyze_module(file: str) -> Module:
                 top_level_calls=[],
                 global_vars={},
                 has_main_guard=False,
+                is_pytest_candidate=is_pytest_filename(file),
             )
 
 
@@ -65,7 +68,34 @@ def get_module(path: str, tree: ast.Module) -> Module:
         top_level_calls=get_top_level_function_calls(tree),
         global_vars=extract_global_vars(tree),
         has_main_guard=module_has_main_guard(tree),
+        is_pytest_candidate=is_pytest_filename(path) or tree_has_pytest_tests(tree),
     )
+
+
+def is_pytest_filename(path: str) -> bool:
+    """Return whether a path follows pytest's default test-module conventions."""
+
+    filename = Path(path).name
+    return (filename.startswith("test_") or filename.endswith("_test.py")) and (
+        filename.endswith(".py")
+    )
+
+
+def tree_has_pytest_tests(tree: ast.Module) -> bool:
+    """Return whether an AST contains conventional top-level pytest tests."""
+
+    for statement in tree.body:
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if statement.name.startswith("test_"):
+                return True
+        elif isinstance(statement, ast.ClassDef) and statement.name.startswith("Test"):
+            if any(
+                isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and member.name.startswith("test_")
+                for member in statement.body
+            ):
+                return True
+    return False
 
 
 def module_has_main_guard(tree: ast.Module) -> bool:

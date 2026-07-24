@@ -25,6 +25,12 @@ async def test_uvicorn_serves_a_real_websocket(
     (tmp_path / "example.py").write_text(
         'print("websocket relay works")\n', encoding="utf-8"
     )
+    (tmp_path / "test_example.py").write_text(
+        "def test_websocket_pytest():\n"
+        "    print('captured from pytest')\n"
+        "    assert 2 + 2 == 4\n",
+        encoding="utf-8",
+    )
     set_project_root(tmp_path)
     monkeypatch.delenv(ALLOWED_ORIGINS_ENV, raising=False)
 
@@ -78,7 +84,54 @@ async def test_uvicorn_serves_a_real_websocket(
         ]
         assert run_messages[1]["data"]["data"] == f"websocket relay works{os.linesep}"
 
-        for path in ("/ws", "/ws/example/run"):
+        async with websockets.connect(
+            f"ws://127.0.0.1:{port}/ws/test_example/tests",
+            origin=cast(Any, f"http://127.0.0.1:{port}"),
+        ) as websocket:
+            await websocket.send(
+                '{"type":"TEST_COLLECT","data":{"run_id":"collect-live"}}'
+            )
+            test_messages: list[dict[str, Any]] = []
+            while not any(
+                message["type"] == "TEST_RUN_FINISHED" for message in test_messages
+            ):
+                test_messages.append(json.loads(await websocket.recv()))
+            collected = next(
+                message
+                for message in test_messages
+                if message["type"] == "TESTS_COLLECTED"
+            )
+            node_id = collected["data"]["tests"][0]["node_id"]
+
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "TEST_RUN",
+                        "data": {"run_id": "run-live", "node_ids": [node_id]},
+                    }
+                )
+            )
+            run_test_messages: list[dict[str, Any]] = []
+            while not any(
+                message["type"] == "TEST_RUN_FINISHED" for message in run_test_messages
+            ):
+                run_test_messages.append(json.loads(await websocket.recv()))
+            result = next(
+                message
+                for message in run_test_messages
+                if message["type"] == "TEST_RESULT"
+            )
+            assert result["data"]["test"]["outcome"] == "passed"
+            assert (
+                "captured from pytest"
+                in next(
+                    phase
+                    for phase in result["data"]["test"]["phases"]
+                    if phase["phase"] == "call"
+                )["stdout"]
+            )
+
+        for path in ("/ws", "/ws/example/run", "/ws/test_example/tests"):
             with pytest.raises(websockets.exceptions.InvalidHandshake):
                 async with websockets.connect(
                     f"ws://127.0.0.1:{port}{path}",
