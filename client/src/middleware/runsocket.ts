@@ -10,6 +10,7 @@ import { parseJsonMessage } from '../Message';
 export const runsocketMiddlewareFactory = () => {
 
     let socket: Socket | null;
+    let pendingExitPid: number | null = null;
 
     return (params: any) => {
         const { dispatch, getState } = params;
@@ -28,6 +29,7 @@ export const runsocketMiddlewareFactory = () => {
                     if (socket) {
                         socket.disconnect();
                     }
+                    pendingExitPid = null;
                     const endpoint = payload.endpoint as string;
                     const module = payload.module as string;
 
@@ -50,10 +52,18 @@ export const runsocketMiddlewareFactory = () => {
 
                         // const { process } = getState() as RootState;
                         switch (message.type) {
-                            case 'RUNNING':
-                                dispatch(clearStdIO());
-                                dispatch(setProcess({ pid: message?.data.pid, module: module, path: 'TODO', state: PyProcessState.RUNNING }));
+                            case 'RUNNING': {
+                                const pid = message?.data.pid;
+                                const exitedBeforeRunning = pendingExitPid === pid;
+                                pendingExitPid = null;
+                                dispatch(setProcess({ pid: pid, module: module, path: 'TODO', state: PyProcessState.RUNNING }));
+                                if (exitedBeforeRunning) {
+                                    dispatch(
+                                        updateProcessState({ state: PyProcessState.EXITED })
+                                    );
+                                }
                                 break;
+                            }
                             case 'STDOUT':
                                 if (message.data.is_input_prompt) {
                                     dispatch(
@@ -94,12 +104,20 @@ export const runsocketMiddlewareFactory = () => {
                                     dispatch(
                                         updateProcessState({ state: PyProcessState.EXITED })  // TODO: Add exit code
                                     );
+                                } else if (process.active?.state === PyProcessState.STARTING) {
+                                    pendingExitPid = message.data.pid;
                                 }
                                 break;
                         }
                     });
 
                     socket.on('open', () => {
+                        // WebSocket guarantees "open" precedes "message", so this
+                        // clears a previous/reconnected run without discarding
+                        // output that races ahead of the RUNNING message.
+                        pendingExitPid = null;
+                        dispatch(clearStdIO());
+                        dispatch(setProcess({ pid: 0, module: module, path: 'TODO', state: PyProcessState.STARTING }));
                         setReadyState(WebSocket.OPEN);
                     });
 

@@ -20,6 +20,7 @@ from .web_socket_event import WebSocketEvent
 
 TEN_MEGABYTES: int = 10 * 1024 * 1024
 _PROMPT_PREFIX = b"\xff\xff\xff\xff"
+_TRAILHEAD_IMPORT_ROOT = Path(__file__).resolve().parents[1]
 
 _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9
@@ -276,6 +277,7 @@ class AsyncPythonSubprocess:
         return (
             sys.executable,
             "-u",
+            "-P",
             "-m",
             self._wrapper,
             self._module,
@@ -292,6 +294,15 @@ class AsyncPythonSubprocess:
         # boundary and Windows otherwise inherits a locale-dependent code page.
         environment["PYTHONIOENCODING"] = "utf-8"
         environment["PYTHONUTF8"] = "1"
+        # The server may have been imported through debugger-managed sys.path
+        # state which a fresh child does not inherit. Also, without -P, `-m`
+        # searches the student's project before the installed Trailhead package,
+        # so a project package named `trailhead` can shadow our wrappers.
+        python_path = environment.get("PYTHONPATH")
+        import_paths = [str(_TRAILHEAD_IMPORT_ROOT), str(self._project_root)]
+        if python_path:
+            import_paths.append(python_path)
+        environment["PYTHONPATH"] = os.pathsep.join(import_paths)
 
         # Uvicorn's reload worker uses a SelectorEventLoop on Windows, where
         # asyncio's subprocess transport is unavailable. Popen plus thread-backed

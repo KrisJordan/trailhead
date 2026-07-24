@@ -27,6 +27,7 @@ class Module(BaseModel):
     top_level_functions: list[Function]
     top_level_calls: list[str]
     global_vars: Dict[str, Any]
+    has_main_guard: bool = False
 
 
 def main() -> None:
@@ -52,6 +53,7 @@ def analyze_module(file: str) -> Module:
                 top_level_functions=[],
                 top_level_calls=[],
                 global_vars={},
+                has_main_guard=False,
             )
 
 
@@ -62,7 +64,35 @@ def get_module(path: str, tree: ast.Module) -> Module:
         top_level_functions=get_module_function_definitions(tree),
         top_level_calls=get_top_level_function_calls(tree),
         global_vars=extract_global_vars(tree),
+        has_main_guard=module_has_main_guard(tree),
     )
+
+
+def module_has_main_guard(tree: ast.Module) -> bool:
+    """Return whether the module has a top-level ``__main__`` guard."""
+
+    def is_name(node: ast.expr) -> bool:
+        return isinstance(node, ast.Name) and node.id == "__name__"
+
+    def is_main(node: ast.expr) -> bool:
+        return isinstance(node, ast.Constant) and node.value == "__main__"
+
+    for statement in tree.body:
+        if not isinstance(statement, ast.If):
+            continue
+        test = statement.test
+        if (
+            isinstance(test, ast.Compare)
+            and len(test.ops) == 1
+            and isinstance(test.ops[0], ast.Eq)
+            and len(test.comparators) == 1
+            and (
+                (is_name(test.left) and is_main(test.comparators[0]))
+                or (is_main(test.left) and is_name(test.comparators[0]))
+            )
+        ):
+            return True
+    return False
 
 
 def extract_global_vars(tree: ast.Module) -> Dict[str, Any]:
@@ -171,6 +201,10 @@ def get_top_level_function_calls(tree: ast.AST) -> list[str]:
 
         def visit_FunctionDef(self, node: ast.FunctionDef):
             # Only looking for top-level function calls
+            ...
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+            # Async function bodies are definitions too, not top-level execution.
             ...
 
         def visit_For(self, node: ast.For):

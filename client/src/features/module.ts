@@ -93,6 +93,7 @@ export interface ModuleInfo {
     top_level_functions: any[];
     top_level_calls: string[];
     global_vars: { [key: string]: any };
+    has_main_guard: boolean;
 }
 
 export interface ModuleState {

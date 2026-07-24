@@ -103,10 +103,35 @@ def test_child_command_uses_current_interpreter(tmp_path: Path) -> None:
     assert process.command == (
         sys.executable,
         "-u",
+        "-P",
         "-m",
         "trailhead.wrappers.module",
         "example",
     )
+
+
+async def test_child_uses_server_installation_when_project_shadows_trailhead(
+    tmp_path: Path,
+) -> None:
+    project_package = tmp_path / "trailhead"
+    project_package.mkdir()
+    (project_package / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "shadow_example.py").write_text(
+        'print("server wrapper loaded")\n', encoding="utf-8"
+    )
+    recording_socket = RecordingSocket()
+    process = AsyncPythonSubprocess(
+        "shadow_example",
+        cast(WebSocket, recording_socket),
+        project_root=tmp_path,
+    )
+
+    await process.start()
+    assert await asyncio.wait_for(process.await_end(), timeout=10) == 0
+    stdout = [
+        message for message in recording_socket.messages if message["type"] == "STDOUT"
+    ]
+    assert stdout[0]["data"]["data"] == f"server wrapper loaded{os.linesep}"  # type: ignore[index]
 
 
 async def test_syntax_error_is_rooted_at_student_module(tmp_path: Path) -> None:

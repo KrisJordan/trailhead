@@ -2,6 +2,21 @@ import { ModuleInfo, clearModule, setModule } from "../features/module";
 import store from "../app/store";
 import router from "../routes";
 
+export type ModuleTool = "gui" | "run" | "repl";
+
+export const defaultModuleTool = (moduleInfo: ModuleInfo): ModuleTool => {
+    if (moduleInfo.global_vars?.["__template__"]) {
+        return "gui";
+    }
+    if (moduleInfo.has_main_guard || moduleInfo.top_level_calls?.length > 0) {
+        return "run";
+    }
+    if (moduleInfo.top_level_functions?.length > 0) {
+        return "repl";
+    }
+    return "run";
+};
+
 export const runLoader = async ({ params }: any) => {
     store.dispatch({
         type: "runsocket/connect",
@@ -38,7 +53,7 @@ export const guiLoader = async ({ params }: any) => {
 export const moduleLoader = async ({ params, request }: any) => {
     if (params.moduleName) {
         // Load the module info
-        let moduleInfoResponse = await fetch(`/api/module/${params.moduleName}`);
+        const moduleInfoResponse = await fetch(`/api/module/${params.moduleName}`);
         if (moduleInfoResponse.status === 404) {
             // Redirect to home if the module doesn't exist
             store.dispatch({ type: "runsocket/disconnect" });
@@ -46,7 +61,7 @@ export const moduleLoader = async ({ params, request }: any) => {
             return null;
         }
 
-        let moduleInfo = await moduleInfoResponse.json() as ModuleInfo;
+        const moduleInfo = await moduleInfoResponse.json() as ModuleInfo;
         store.dispatch(setModule({ module: params.moduleName, info: moduleInfo }));
 
         /* Here we "sniff" the module to see whether it looks like just function definitions and
@@ -60,15 +75,7 @@ export const moduleLoader = async ({ params, request }: any) => {
         const windowLocation = window.location.protocol + "//" + window.location.host;
         const requestUrl = decodeURIComponent(request.url.replace(windowLocation, ""));
         if (target === requestUrl) {
-            if (moduleInfo.global_vars?.["__template__"]) {
-                target += "/gui";
-            } else if (moduleInfo.top_level_calls && moduleInfo.top_level_calls.length > 0) {
-                target += "/run";
-            } else if (moduleInfo.top_level_functions && moduleInfo.top_level_functions.length > 0) {
-                target += "/repl";
-            } else {
-                target += "/run";
-            }
+            target += `/${defaultModuleTool(moduleInfo)}`;
 
             if (requestUrl !== target) {
                 router.navigate(target);
