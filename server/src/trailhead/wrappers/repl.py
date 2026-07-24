@@ -1,5 +1,4 @@
 import sys
-import json
 import ast
 import inspect
 from pydantic import BaseModel, RootModel, SerializeAsAny
@@ -163,9 +162,8 @@ def exec_callback(result: Any, globals: dict[str, Any], statement_ast: ast.Modul
     # print(ast.dump(statement_ast))
 
     if result is not None:
-        sys.stderr.write(
-            f'{{"type": "expr_eval", "value": {decompose_value(result).model_dump_json()}}}'
-        )
+        value = decompose_value(result).model_dump_json()
+        sys.stderr.write(f'{{"type": "expr_eval", "value": {value}}}')
         sys.stderr.write("\n")
         sys.stderr.flush()
 

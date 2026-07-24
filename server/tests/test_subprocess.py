@@ -170,7 +170,8 @@ async def test_child_uses_server_installation_when_project_shadows_trailhead(
     stdout = [
         message for message in recording_socket.messages if message["type"] == "STDOUT"
     ]
-    assert stdout[0]["data"]["data"] == f"server wrapper loaded{os.linesep}"  # type: ignore[index]
+    data = cast(dict[str, object], stdout[0]["data"])
+    assert data["data"] == f"server wrapper loaded{os.linesep}"
 
 
 @pytest.mark.skipif(
@@ -293,7 +294,8 @@ async def test_child_runs_without_asyncio_subprocess_transport(
     stdout = [
         message for message in recording_socket.messages if message["type"] == "STDOUT"
     ]
-    assert stdout[0]["data"]["data"] == f"Hello, \N{SNOWMAN}!{os.linesep}"  # type: ignore[index]
+    data = cast(dict[str, object], stdout[0]["data"])
+    assert data["data"] == f"Hello, \N{SNOWMAN}!{os.linesep}"
     assert recording_socket.messages[-1]["type"] == "EXIT"
 
 

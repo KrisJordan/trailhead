@@ -154,7 +154,7 @@ def test_cli_origin_helper_canonicalizes_and_adds_to_environment(
 
 
 def os_environ_value() -> str:
-    # A helper keeps the environment lookup typed as str for mypy on all
+    # A helper keeps the environment lookup typed as str for static analysis on all
     # supported Python versions.
     import os
 

@@ -162,8 +162,10 @@ def exec_callback(result: Any, globals: dict[str, Any], statement_ast: ast.Modul
     # name of variable
     # print(ast.dump(statement_ast))
 
+    value = decompose_value(result).model_dump_json()
+    raw_value = json.dumps(result, default=lambda value: value.__dict__)
     sys.stderr.write(
-        f'{{"type": "expr_eval", "value": {decompose_value(result).model_dump_json()}, "raw_value": {json.dumps(result, default=lambda o: o.__dict__)}}}'
+        f'{{"type": "expr_eval", "value": {value}, "raw_value": {raw_value}}}'
     )
     sys.stderr.write("\n")
     sys.stderr.flush()

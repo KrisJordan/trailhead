@@ -136,14 +136,14 @@ is unnecessary when commands are run through `uv run --project server`.
 ## Development and verification
 
 ```sh
-# Python tests and type checking
+# Python tests, linting, formatting, and type checking
 uv run --project server --locked python -m pytest server/tests
-uv run --project server --locked mypy --config-file server/pyproject.toml \
+uv run --project server --locked ruff check --config server/pyproject.toml \
   server/src server/tests scripts bin/build-trailhead
-
-# Python formatting
 uv run --project server --locked ruff format --check \
+  --config server/pyproject.toml \
   server/src server/tests scripts bin/build-trailhead
+uv run --project server --locked pyright --project pyrightconfig.json
 
 # Browser client checks
 npm run typecheck --prefix client

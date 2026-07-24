@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import sys
-from typing import Sequence
+from typing import Sequence, TypedDict
 
 import uvicorn
 
@@ -17,6 +17,14 @@ from .websocket_origin import (
 )
 
 PACKAGE_DIR = Path(__file__).resolve().parent
+
+
+class UvicornOptions(TypedDict, total=False):
+    host: str
+    port: int
+    log_level: str
+    reload: bool
+    reload_dirs: list[str]
 
 
 def _port(value: str) -> int:
@@ -54,7 +62,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--root",
         type=Path,
         default=Path.cwd(),
-        help="project containing the Python modules to serve (default: current directory)",
+        help=(
+            "project containing the Python modules to serve "
+            "(default: current directory)"
+        ),
     )
     parser.add_argument(
         "--reload",
@@ -96,7 +107,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Starting Trailhead server at http://{_url_host(args.host)}:{args.port}")
     print("Press Ctrl+C to stop the Trailhead server")
 
-    options: dict[str, object] = {
+    options: UvicornOptions = {
         "host": args.host,
         "port": args.port,
         "log_level": args.log_level,
@@ -109,7 +120,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # An import string works both normally and in Uvicorn's spawned reload
     # worker. Any startup/import failure remains visible to the caller.
-    uvicorn.run("trailhead.app:app", **options)  # type: ignore[arg-type]
+    uvicorn.run("trailhead.app:app", **options)
     return 0
 
 

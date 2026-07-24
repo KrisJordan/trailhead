@@ -36,16 +36,22 @@ jobs:
           package_version="$(uv run --project server --locked --no-sync trailhead --version)"
           test "v${package_version}" = "${GITHUB_REF_NAME}"
 
+      - name: Lint Python
+        run: >-
+          uv run --project server --locked --no-sync ruff check
+          --config server/pyproject.toml
+          server/src server/tests scripts bin/build-trailhead
+
       - name: Check Python formatting
         run: >-
           uv run --project server --locked --no-sync ruff format --check
+          --config server/pyproject.toml
           server/src server/tests scripts bin/build-trailhead
 
       - name: Type-check Python
         run: >-
-          uv run --project server --locked --no-sync mypy
-          --config-file server/pyproject.toml
-          server/src server/tests scripts bin/build-trailhead
+          uv run --project server --locked --no-sync pyright
+          --project pyrightconfig.json
 
       - name: Run Python tests
         run: >-

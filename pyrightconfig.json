@@ -1,0 +1,19 @@
+{
+    "include": [
+        "server/src/trailhead",
+        "server/tests",
+        "scripts",
+        "bin/build-trailhead"
+    ],
+    "extraPaths": [
+        "server/src",
+        "."
+    ],
+    "venvPath": "server",
+    "venv": ".venv",
+    "pythonVersion": "3.11",
+    "pythonPlatform": "All",
+    "typeCheckingMode": "standard",
+    "reportUnnecessaryCast": "error",
+    "reportUnnecessaryTypeIgnoreComment": "error"
+}

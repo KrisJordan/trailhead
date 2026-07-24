@@ -147,7 +147,7 @@ class InteractiveInterpreter:
             del self.locals["__exec_ast__"]
         except SystemExit:
             raise
-        except:
+        except BaseException:
             self.showtraceback()
 
     def showsyntaxerror(self, filename=None):
@@ -289,7 +289,7 @@ class InteractiveConsole(InteractiveInterpreter):
                 else:
                     prompt = sys.ps1
                 try:
-                    line = self.raw_input(prompt)
+                    line = self.raw_input(str(prompt))
                 except EOFError:
                     self.write("\n")
                     break

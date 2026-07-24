@@ -89,16 +89,22 @@ jobs:
       - name: Check module entry point
         run: uv run --project server --locked --no-sync trailhead --help
 
-      - name: Type-check Python package
+      - name: Lint Python
         run: >-
-          uv run --project server --locked --no-sync mypy
-          --config-file server/pyproject.toml
+          uv run --project server --locked --no-sync ruff check
+          --config server/pyproject.toml
           server/src server/tests scripts bin/build-trailhead
 
       - name: Check Python formatting
         run: >-
           uv run --project server --locked --no-sync ruff format --check
+          --config server/pyproject.toml
           server/src server/tests scripts bin/build-trailhead
+
+      - name: Type-check Python package
+        run: >-
+          uv run --project server --locked --no-sync pyright
+          --project pyrightconfig.json
 
       - name: Exercise portable unpacked build
         run: uv run --project server --locked --no-sync python bin/build-trailhead

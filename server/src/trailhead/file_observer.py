@@ -58,9 +58,7 @@ class _FileChangeHandler(FileSystemEventHandler):
             "node_modules",
             "venv",
         }
-        self._cache: cachetools.TTLCache[str, float] = cachetools.TTLCache(
-            maxsize=1000, ttl=0.5
-        )
+        self._cache = cachetools.TTLCache[str, float](maxsize=1000, ttl=0.5)
 
     def _event_filter(self, event: FileSystemEvent):
         # Splitting both separators also makes synthetic Windows-path tests

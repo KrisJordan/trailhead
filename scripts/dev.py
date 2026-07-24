@@ -12,12 +12,20 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Any
+from types import FrameType
+from typing import Callable, TypedDict
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CLIENT_DIRECTORY = REPOSITORY_ROOT / "client"
 COMPSTAGRAM_DIRECTORY = REPOSITORY_ROOT / "compstagram"
 VENV_DIRECTORY = REPOSITORY_ROOT / "server" / ".venv"
+
+SignalHandler = Callable[[int, FrameType | None], object] | int | signal.Handlers | None
+
+
+class ProcessOptions(TypedDict, total=False):
+    creationflags: int
+    start_new_session: bool
 
 
 def find_command(name: str) -> str | None:
@@ -82,7 +90,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def process_options() -> dict[str, Any]:
+def process_options() -> ProcessOptions:
     if sys.platform == "win32":
         return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
     return {"start_new_session": True}
@@ -154,10 +162,10 @@ def stop_all(processes: list[subprocess.Popen[bytes]]) -> None:
 
 def install_shutdown_handlers(
     shutdown_requested: threading.Event,
-) -> dict[signal.Signals, object]:
+) -> dict[signal.Signals, SignalHandler]:
     """Turn service-manager termination signals into orderly unwinding."""
 
-    previous: dict[signal.Signals, object] = {}
+    previous: dict[signal.Signals, SignalHandler] = {}
 
     def request_shutdown(signum: int, frame: object) -> None:
         shutdown_requested.set()
@@ -174,9 +182,9 @@ def install_shutdown_handlers(
     return previous
 
 
-def restore_signal_handlers(previous: dict[signal.Signals, object]) -> None:
+def restore_signal_handlers(previous: dict[signal.Signals, SignalHandler]) -> None:
     for shutdown_signal, handler in previous.items():
-        signal.signal(shutdown_signal, handler)  # type: ignore[arg-type]
+        signal.signal(shutdown_signal, handler)
 
 
 def main() -> int:

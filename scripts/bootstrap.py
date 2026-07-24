@@ -85,7 +85,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-client",
         action="store_true",
-        help="Install only Python dependencies; do not install or build the web client.",
+        help=(
+            "Install only Python dependencies; do not install or build the web client."
+        ),
     )
     parser.add_argument(
         "--runtime-only",

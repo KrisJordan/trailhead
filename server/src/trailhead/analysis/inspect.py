@@ -145,7 +145,9 @@ def get_module_function_definitions(tree: ast.AST) -> list[Function]:
             # Not looking for method definitions
             ...
 
-        def visit_FunctionDef(self, node: ast.FunctionDef):
+        def visit_FunctionDef(
+            self, node: ast.FunctionDef | ast.AsyncFunctionDef
+        ) -> None:
             ast_params = node.args.args
             parameters = [
                 Parameter(name=param.arg, type=self._get_param_type(param.annotation))
@@ -161,8 +163,8 @@ def get_module_function_definitions(tree: ast.AST) -> list[Function]:
                 )
             )
 
-        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
-            return self.visit_FunctionDef(node)  # type: ignore
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self.visit_FunctionDef(node)
 
         def _get_param_type(self, node: ast.expr | None) -> str:
             if node is None:
