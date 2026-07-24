@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "programs": {
+    "infinite_program": {
+      "title": "Trailhead E2E: infinite",
+      "filename": "infinite.html",
+      "assets": [],
+      "packages": []
+    }
+  }
+}

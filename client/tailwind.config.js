@@ -1,3 +1,6 @@
+import typography from "@tailwindcss/typography"
+import daisyui from "daisyui"
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -8,8 +11,8 @@ export default {
     extend: {},
   },
   plugins: [
-    require("@tailwindcss/typography"),
-    require("daisyui")
+    typography,
+    daisyui
   ],
   daisyui: {
     darkTheme: "trailhead",
@@ -30,4 +33,3 @@ export default {
     ]
   }
 }
-

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "programs": {
+    "package.main": {
+      "title": "Trailhead E2E: core",
+      "filename": "core.html",
+      "assets": [
+        "assets/message.bin"
+      ],
+      "packages": [
+        "numpy"
+      ]
+    }
+  }
+}

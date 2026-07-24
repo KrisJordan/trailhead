@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "programs": {
+    "package.failure": {
+      "title": "Trailhead E2E: structured_error",
+      "filename": "structured_error.html",
+      "assets": [],
+      "packages": []
+    }
+  }
+}

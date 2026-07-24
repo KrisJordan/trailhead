@@ -41,6 +41,7 @@ export const moduleLoader = async ({ params, request }: any) => {
         let moduleInfoResponse = await fetch(`/api/module/${params.moduleName}`);
         if (moduleInfoResponse.status === 404) {
             // Redirect to home if the module doesn't exist
+            store.dispatch({ type: "runsocket/disconnect" });
             router.navigate("/");
             return null;
         }
@@ -74,6 +75,7 @@ export const moduleLoader = async ({ params, request }: any) => {
             }
         }
     } else {
+        store.dispatch({ type: "runsocket/disconnect" });
         store.dispatch(clearModule());
     }
 

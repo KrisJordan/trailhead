@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "programs": {
+    "input_program": {
+      "title": "Trailhead E2E: input",
+      "filename": "input.html",
+      "assets": [],
+      "packages": []
+    }
+  }
+}

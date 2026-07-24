@@ -51,6 +51,11 @@ jobs:
         working-directory: client
         run: npm run typecheck
 
+      - name: Test browser client
+        if: matrix.python-version == '3.12'
+        working-directory: client
+        run: npm test
+
       - name: Build browser client into Python package
         working-directory: client
         run: npm run build

@@ -147,6 +147,7 @@ uv run --project server --locked ruff format --check \
 
 # Browser client checks
 npm run typecheck --prefix client
+npm test --prefix client
 npm run build --prefix client
 
 # Optional GUI template builds
