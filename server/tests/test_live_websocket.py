@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 import socket
 from typing import Any, cast
@@ -75,7 +76,7 @@ async def test_uvicorn_serves_a_real_websocket(
             "STDOUT",
             "EXIT",
         ]
-        assert run_messages[1]["data"]["data"] == "websocket relay works\n"
+        assert run_messages[1]["data"]["data"] == f"websocket relay works{os.linesep}"
 
         for path in ("/ws", "/ws/example/run"):
             with pytest.raises(websockets.exceptions.InvalidHandshake):

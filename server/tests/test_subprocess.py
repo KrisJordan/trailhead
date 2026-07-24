@@ -175,7 +175,7 @@ async def test_child_runs_without_asyncio_subprocess_transport(
     stdout = [
         message for message in recording_socket.messages if message["type"] == "STDOUT"
     ]
-    assert stdout[0]["data"]["data"] == "Hello, \N{SNOWMAN}!\n"  # type: ignore[index]
+    assert stdout[0]["data"]["data"] == f"Hello, \N{SNOWMAN}!{os.linesep}"  # type: ignore[index]
     assert recording_socket.messages[-1]["type"] == "EXIT"
 
 
@@ -331,4 +331,4 @@ async def test_child_accepts_input_after_unicode_prompt(tmp_path: Path) -> None:
         if message["type"] == "STDOUT"
     )
     assert "caf\N{LATIN SMALL LETTER E WITH ACUTE}? " in stdout_text
-    assert "yes\n" in stdout_text
+    assert f"yes{os.linesep}" in stdout_text
