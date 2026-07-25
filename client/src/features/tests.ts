@@ -17,7 +17,6 @@ export interface CollectedTest {
     name: string;
     path?: string;
     line?: number;
-    editor_url?: string;
     markers?: string[];
     truncated?: string[];
 }
@@ -35,7 +34,6 @@ export interface TestFailure {
     traceback?: string;
     path?: string;
     line?: number;
-    editor_url?: string;
 }
 
 export interface TestPhaseResult extends CapturedTestOutput {
@@ -54,7 +52,6 @@ export interface TestResult extends CapturedTestOutput {
     name?: string;
     path?: string;
     line?: number;
-    editor_url?: string;
     markers?: string[];
     outcome: TestOutcome;
     duration?: number;
@@ -77,36 +74,7 @@ export interface TestRunError {
     column?: number;
     end_column?: number;
     source?: string;
-    editor_url?: string;
     truncated?: string[];
-}
-
-export function normalizeEditorUrl(value: unknown): string | undefined {
-    if (
-        typeof value !== "string"
-        || !value.startsWith("vscode://file/")
-    ) {
-        return undefined;
-    }
-    try {
-        const parsed = new URL(value);
-        if (
-            parsed.protocol !== "vscode:"
-            || parsed.hostname !== "file"
-            || parsed.username
-            || parsed.password
-            || parsed.port
-            || parsed.pathname === "/"
-            || parsed.search
-            || parsed.hash
-            || parsed.href !== value
-        ) {
-            return undefined;
-        }
-    } catch {
-        return undefined;
-    }
-    return value;
 }
 
 export type TestSessionStatus =
@@ -126,6 +94,7 @@ export interface TestsState {
     activeRunId: string | null;
     requestedNodeIds: string[] | null;
     collected: CollectedTest[];
+    collectionTotal: number;
     results: Record<string, TestResult>;
     summary: TestSummary | null;
     duration: number | null;
@@ -156,6 +125,7 @@ const initialState: TestsState = {
     activeRunId: null,
     requestedNodeIds: null,
     collected: [],
+    collectionTotal: 0,
     results: {},
     summary: null,
     duration: null,
@@ -182,6 +152,7 @@ const testsSlice = createSlice({
             state.activeRunId = null;
             state.requestedNodeIds = null;
             state.collected = [];
+            state.collectionTotal = 0;
             state.results = {};
             state.summary = null;
             state.duration = null;
@@ -222,11 +193,21 @@ const testsSlice = createSlice({
             action: PayloadAction<{
                 run_id: string;
                 tests: CollectedTest[];
+                total?: number;
             }>,
         ) {
             if (action.payload.run_id !== state.activeRunId) {
                 return;
             }
+            const suppliedTotal = action.payload.total;
+            const payloadTotal = Math.max(
+                suppliedTotal !== undefined
+                    && Number.isInteger(suppliedTotal)
+                    && suppliedTotal >= 0
+                    ? suppliedTotal
+                    : action.payload.tests.length,
+                action.payload.tests.length,
+            );
             if (
                 (
                     state.status === "running"
@@ -241,8 +222,17 @@ const testsSlice = createSlice({
                     byNodeId.set(test.node_id, test);
                 }
                 state.collected = Array.from(byNodeId.values());
+                state.collectionTotal = Math.max(
+                    state.collectionTotal,
+                    payloadTotal,
+                    state.collected.length,
+                );
             } else {
                 state.collected = action.payload.tests;
+                state.collectionTotal = Math.max(
+                    payloadTotal,
+                    state.collected.length,
+                );
             }
         },
         testRunRequested(
@@ -320,6 +310,10 @@ const testsSlice = createSlice({
                     markers: result.markers,
                     truncated: result.truncated,
                 });
+                state.collectionTotal = Math.max(
+                    state.collectionTotal,
+                    state.collected.length,
+                );
             }
             state.results[action.payload.result.node_id] =
                 action.payload.result;

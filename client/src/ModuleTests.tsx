@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./app/store";
 import {
@@ -10,7 +10,6 @@ import {
     TestRunError,
     TestSummary,
     TestsState,
-    normalizeEditorUrl,
     resumeTestAutorun,
     setTestAutorun,
 } from "./features/tests";
@@ -36,33 +35,6 @@ const outcomeClasses: Record<TestOutcome, string> = {
     xpassed: "badge-warning",
     cancelled: "badge-neutral text-white",
 };
-
-export function SourceLink({
-    children,
-    editorUrl,
-    label,
-    className,
-}: {
-    children: ReactNode;
-    editorUrl?: string;
-    label: string;
-    className?: string;
-}) {
-    const safeEditorUrl = normalizeEditorUrl(editorUrl);
-    if (!safeEditorUrl) {
-        return <span className={className}>{children}</span>;
-    }
-    return (
-        <a
-            aria-label={`Open ${label} in VS Code`}
-            className={`link ${className ?? ""}`}
-            href={safeEditorUrl}
-            title="Open in VS Code"
-        >
-            {children}
-        </a>
-    );
-}
 
 function formatDuration(duration?: number | null): string | null {
     if (duration === undefined || duration === null) {
@@ -130,17 +102,11 @@ export function Summary({
     duration: number | null;
     cancelled: boolean;
 }) {
-    const total = summary.total;
     return (
         <div
             className="flex flex-wrap items-center gap-2"
             aria-label="Test run summary"
         >
-            {typeof total === "number" && (
-                <span className="font-semibold">
-                    {total} {total === 1 ? "test" : "tests"}
-                </span>
-            )}
             {outcomeOrder.map((outcome) => {
                 const count = summary[outcome] ?? 0;
                 return count > 0
@@ -165,6 +131,30 @@ export function Summary({
                 </span>
             )}
         </div>
+    );
+}
+
+function formatLocation(
+    path?: string,
+    line?: number,
+    column?: number,
+): string | null {
+    const lineLabel = line === undefined ? null : `Line ${line}`;
+    let location = [path, lineLabel].filter(Boolean).join(" · ");
+    if (!location) {
+        return null;
+    }
+    if (column !== undefined) {
+        location += `, column ${column}`;
+    }
+    return location;
+}
+
+export function TestCountHeading({ count }: { count: number }) {
+    return (
+        <h1 className="text-2xl font-bold">
+            {count} {count === 1 ? "test" : "tests"}
+        </h1>
     );
 }
 
@@ -259,15 +249,7 @@ function PhaseDetail({
     const traceback = failure?.traceback;
     const path = failure?.path ?? result.path;
     const line = failure?.line ?? result.line;
-    const location = `${path ?? result.node_id}${
-        line !== undefined ? `:${line}` : ""
-    }`;
-    const hasFailureLocation = Boolean(
-        failure?.path || failure?.line !== undefined,
-    );
-    const editorUrl = failure?.editor_url ?? (
-        hasFailureLocation ? undefined : result.editor_url
-    );
+    const location = formatLocation(path, line);
     const truncatedDetails = phase.truncated?.filter(
         (field) => !["stdout", "stderr", "log"].includes(field),
     ) ?? [];
@@ -297,14 +279,9 @@ function PhaseDetail({
                         details truncated
                     </span>
                 )}
-                {(path || line !== undefined) && (
+                {location && (
                     <code className="text-xs opacity-75">
-                        <SourceLink
-                            editorUrl={editorUrl}
-                            label={location}
-                        >
-                            {location}
-                        </SourceLink>
+                        {location}
                     </code>
                 )}
             </div>
@@ -440,9 +417,11 @@ export function ErrorPanel({ error }: { error: TestRunError }) {
             1,
         ))}`
         : null;
-    const location = `${error.path ?? ""}${
-        error.line !== undefined ? `:${error.line}` : ""
-    }${error.column !== undefined ? `:${error.column}` : ""}`;
+    const location = formatLocation(
+        error.path,
+        error.line,
+        error.column,
+    );
     return (
         <div role="alert" className="alert alert-error items-start text-white">
             <div>
@@ -457,14 +436,9 @@ export function ErrorPanel({ error }: { error: TestRunError }) {
                         </span>
                     )}
                 </div>
-                {(error.path || error.line !== undefined) && (
+                {location && (
                     <code className="mb-2 block text-sm">
-                        <SourceLink
-                            editorUrl={error.editor_url}
-                            label={location}
-                        >
-                            {location}
-                        </SourceLink>
+                        {location}
                     </code>
                 )}
                 {source && (
@@ -567,10 +541,7 @@ export function TestRow({
     onRun: () => void;
 }) {
     const duration = formatDuration(result?.duration);
-    const editorUrl = result?.editor_url ?? test.editor_url;
-    const location = `${test.path ?? ""}${
-        test.line !== undefined ? `:${test.line}` : ""
-    }`;
+    const line = result?.line ?? test.line;
     return (
         <article className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="flex flex-wrap items-start gap-3">
@@ -587,14 +558,8 @@ export function TestRow({
                                     <span className="loading loading-spinner loading-xs" />
                                 )
                                 : <span className="badge badge-ghost">not run</span>}
-                        <h3 className="font-mono font-semibold">
-                            <SourceLink
-                                className="break-all"
-                                editorUrl={editorUrl}
-                                label={`test ${test.name}`}
-                            >
-                                {test.name}
-                            </SourceLink>
+                        <h3 className="break-all font-mono font-semibold">
+                            {test.name}
                         </h3>
                         {test.truncated && test.truncated.length > 0 && (
                             <span
@@ -612,18 +577,8 @@ export function TestRow({
                     </div>
                     <code className="mt-1 block break-all text-xs opacity-60">
                         {test.node_id}
+                        {line !== undefined && ` · Line ${line}`}
                     </code>
-                    {(test.path || test.line !== undefined) && (
-                        <div className="mt-1 text-xs opacity-60">
-                            <SourceLink
-                                className="break-all"
-                                editorUrl={editorUrl}
-                                label={location}
-                            >
-                                {location}
-                            </SourceLink>
-                        </div>
-                    )}
                     {test.markers && test.markers.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                             {test.markers.map((marker) => (
@@ -694,7 +649,7 @@ export function ModuleTests() {
         <div className="grid gap-5" aria-live="polite">
             <header className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1">
-                    <h1 className="text-2xl font-bold">Tests</h1>
+                    <TestCountHeading count={tests.collectionTotal} />
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     <label className="label cursor-pointer gap-2 py-0">

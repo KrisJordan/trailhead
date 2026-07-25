@@ -143,6 +143,28 @@ describe("tests reducer", () => {
         expect(state.collected[0].name).toBe("test_one[updated]");
     });
 
+    it("preserves the authoritative total for a truncated collection", () => {
+        let state = reducer(
+            undefined,
+            startTestSession({ module: "test_example" }),
+        );
+        state = reducer(
+            state,
+            testCollectionRequested({ run_id: "collect-1" }),
+        );
+        state = reducer(
+            state,
+            testsCollected({
+                run_id: "collect-1",
+                tests: [collected("test_example.py::test_visible")],
+                total: 250,
+            }),
+        );
+
+        expect(state.collected).toHaveLength(1);
+        expect(state.collectionTotal).toBe(250);
+    });
+
     it("refreshes the full collection during a run-all request", () => {
         let state = reducer(
             undefined,

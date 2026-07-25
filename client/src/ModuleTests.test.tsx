@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
     ErrorPanel,
     ResultDetails,
-    SourceLink,
     Summary,
+    TestCountHeading,
     TestOutcomeIndicator,
     TestRow,
     TerminalStatus,
@@ -58,46 +58,10 @@ describe("pytest result presentation", () => {
         expect(markup).toContain("1 failed");
         expect(markup).toContain("badge-success");
         expect(markup).toContain("badge-error");
+        expect(markup).not.toContain("3 tests");
     });
 
-    it("renders an accessible VS Code source link without a new tab", () => {
-        const editorUrl =
-            "vscode://file/Users/student/project/test_example.py:4:1";
-        const markup = renderToStaticMarkup(
-            <SourceLink
-                editorUrl={editorUrl}
-                label="test_example.py:4"
-            >
-                test_example.py:4
-            </SourceLink>,
-        );
-
-        expect(markup).toContain(`href="${editorUrl}"`);
-        expect(markup).toContain('title="Open in VS Code"');
-        expect(markup).toContain(
-            'aria-label="Open test_example.py:4 in VS Code"',
-        );
-        expect(markup).not.toContain("target=");
-    });
-
-    it("renders unsafe editor URLs as plain text", () => {
-        const markup = renderToStaticMarkup(
-            <SourceLink
-                editorUrl="https://example.com/not-an-editor-link"
-                label="test_example.py:4"
-            >
-                test_example.py:4
-            </SourceLink>,
-        );
-
-        expect(markup).toContain("test_example.py:4");
-        expect(markup).not.toContain("<a");
-        expect(markup).not.toContain("href=");
-    });
-
-    it("links a collected test name and location to its source", () => {
-        const editorUrl =
-            "vscode://file/Users/student/project/test_example.py:4:1";
+    it("shows each test line on the node id line without a link", () => {
         const markup = renderToStaticMarkup(
             <TestRow
                 disabled={false}
@@ -108,19 +72,30 @@ describe("pytest result presentation", () => {
                     name: "test_example",
                     path: "test_example.py",
                     line: 4,
-                    editor_url: editorUrl,
                 }}
             />,
         );
 
-        expect(markup.match(/href=/g)).toHaveLength(2);
-        expect(markup).toContain("Open test test_example in VS Code");
-        expect(markup).toContain("Open test_example.py:4 in VS Code");
+        expect(markup).toContain(
+            "test_example.py::test_example · Line 4",
+        );
+        expect(markup).not.toContain("test_example.py:4");
+        expect(markup).not.toMatch(/<a(?:\s|>)/);
+    });
+
+    it.each([
+        [0, "0 tests"],
+        [1, "1 test"],
+        [2, "2 tests"],
+    ])("uses the collected count as the pane heading", (count, label) => {
+        const markup = renderToStaticMarkup(
+            <TestCountHeading count={count as number} />,
+        );
+
+        expect(markup).toContain(`>${label}</h1>`);
     });
 
     it("omits phase-summary pills while retaining failure details", () => {
-        const editorUrl =
-            "vscode://file/Users/student/project/test_example.py:4:1";
         const markup = renderToStaticMarkup(
             <ResultDetails
                 result={{
@@ -140,7 +115,6 @@ describe("pytest result presentation", () => {
                                 message: "assert 1 == 2",
                                 path: "test_example.py",
                                 line: 4,
-                                editor_url: editorUrl,
                             },
                         },
                         {
@@ -160,8 +134,8 @@ describe("pytest result presentation", () => {
         expect(markup).toContain("assert 1 == 2");
         expect(markup).toContain('aria-label="Failed"');
         expect(markup).not.toContain(">failed</span>");
-        expect(markup).toContain(`href="${editorUrl}"`);
-        expect(markup.match(/href=/g)).toHaveLength(1);
+        expect(markup).toContain("test_example.py · Line 4");
+        expect(markup).not.toMatch(/<a(?:\s|>)/);
     });
 
     it.each([
@@ -238,8 +212,6 @@ describe("pytest result presentation", () => {
     });
 
     it("renders a concise source frame for collection syntax errors", () => {
-        const editorUrl =
-            "vscode://file/Users/student/project/test_broken.py:1:17";
         const markup = renderToStaticMarkup(
             <ErrorPanel
                 error={{
@@ -250,7 +222,6 @@ describe("pytest result presentation", () => {
                     column: 17,
                     end_column: 18,
                     source: "def test_broken(:",
-                    editor_url: editorUrl,
                     details: [
                         "File \"/venv/lib/python/site-packages/_pytest/pathlib.py\"",
                         "File \"<frozen importlib._bootstrap>\"",
@@ -260,12 +231,13 @@ describe("pytest result presentation", () => {
         );
 
         expect(markup).toContain("Test collection failed");
-        expect(markup).toContain("test_broken.py:1:17");
+        expect(markup).toContain(
+            "test_broken.py · Line 1, column 17",
+        );
         expect(markup).toContain("def test_broken(:");
         expect(markup).toContain("^");
         expect(markup).toContain("SyntaxError: invalid syntax");
-        expect(markup).toContain(`href="${editorUrl}"`);
-        expect(markup).toContain('title="Open in VS Code"');
+        expect(markup).not.toMatch(/<a(?:\s|>)/);
         expect(markup).not.toContain("_pytest/pathlib.py");
         expect(markup).not.toContain("importlib._bootstrap");
     });

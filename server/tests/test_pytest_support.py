@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path
 from typing import Any, Literal, cast
 
 from fastapi import WebSocket
@@ -11,11 +11,7 @@ import pytest
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from trailhead.project import set_project_root
-from trailhead.pytest_plugin import (
-    MAX_COLLECTION_BYTES,
-    TrailheadPytestPlugin,
-    _editor_url_for_path,
-)
+from trailhead.pytest_plugin import MAX_COLLECTION_BYTES, TrailheadPytestPlugin
 from trailhead.pytest_protocol import (
     EVENT_PREFIX,
     MAX_METADATA_BYTES,
@@ -92,42 +88,9 @@ def _events(socket: RecordingSocket, event_type: str) -> list[dict[str, Any]]:
     ]
 
 
-def _expected_editor_url(
-    path: Path,
-    line: int | None = None,
-    column: int = 1,
-) -> str:
-    file_uri = path.resolve().as_uri()
-    assert file_uri.startswith("file:///")
-    encoded_path = file_uri.removeprefix("file:///")
-    url = f"vscode://file/{encoded_path}"
-    return f"{url}:{line}:{column}" if line is not None else url
-
-
 class _Marker:
     def __init__(self, name: str) -> None:
         self.name = name
-
-
-def test_editor_url_format_preserves_windows_drive_and_unc_roots() -> None:
-    assert (
-        _editor_url_for_path(
-            PureWindowsPath(r"C:\Users\Student Name\test_lesson.py"),
-            4,
-        )
-        == "vscode://file/C:/Users/Student%20Name/test_lesson.py:4:1"
-    )
-    assert _editor_url_for_path(
-        PureWindowsPath(r"\\server\share\Course #1\test_lesson.py"),
-        8,
-        3,
-    ) == ("vscode://file//server/share/Course%20%231/test_lesson.py:8:3")
-    assert (
-        _editor_url_for_path(
-            PurePosixPath("/Users/student/lesson:part.py"),
-        )
-        == "vscode://file/Users/student/lesson%3Apart.py"
-    )
 
 
 class _Item:
@@ -222,43 +185,6 @@ async def test_pytest_collection_preserves_parametrized_node_ids_and_marks(
     assert finished["status"] == "collected"
     assert finished["summary"]["total"] == 2
     assert all(message["data"]["run_id"] == "run-1" for message in socket.messages)
-
-
-async def test_pytest_locations_include_encoded_project_editor_urls(
-    tmp_path: Path,
-) -> None:
-    project_root = tmp_path / "Course #1?"
-    project_root.mkdir()
-    module_path = project_root / "test_editor_urls.py"
-    module_path.write_text(
-        "def test_failure():\n    assert False\n",
-        encoding="utf-8",
-    )
-
-    return_code, socket = await _run_pytest(
-        project_root,
-        "test_editor_urls",
-        "run",
-    )
-
-    assert return_code == int(pytest.ExitCode.TESTS_FAILED)
-    expected_base = _expected_editor_url(module_path)
-    assert "%20" in expected_base
-    assert "%23" in expected_base
-    assert "%3F" in expected_base
-    assert " " not in expected_base
-    assert "#" not in expected_base
-    assert "?" not in expected_base
-
-    collected = _events(socket, "TESTS_COLLECTED")[0]["tests"][0]
-    assert collected["editor_url"] == f"{expected_base}:1:1"
-
-    result = _events(socket, "TEST_RESULT")[0]["test"]
-    assert result["editor_url"] == f"{expected_base}:1:1"
-    call = next(phase for phase in result["phases"] if phase["phase"] == "call")
-    assert call["path"] == "test_editor_urls.py"
-    assert call["line"] == 2
-    assert call["editor_url"] == f"{expected_base}:2:1"
 
 
 async def test_result_ids_extend_a_truncated_run_all_collection(
@@ -590,59 +516,6 @@ def test_collection_budget_omission_keeps_safe_results_and_failed_status() -> No
     assert finished["summary"]["failed"] == 1
 
 
-def test_fallback_editor_urls_reject_outside_and_missing_files(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    project_root = tmp_path / "project"
-    project_root.mkdir()
-    inside = project_root / "lesson #1?.py"
-    inside.write_text("def test_inside():\n    pass\n", encoding="utf-8")
-    outside = tmp_path / "outside.py"
-    outside.write_text("def test_outside():\n    pass\n", encoding="utf-8")
-    monkeypatch.chdir(project_root)
-
-    emitted: list[tuple[str, dict[str, Any]]] = []
-    plugin = TrailheadPytestPlugin(
-        lambda event_type, data: emitted.append((event_type, data)),
-        "run",
-    )
-
-    class CollectionReportWithoutLine:
-        failed = True
-        longrepr = "collection failed"
-        location = (inside.name, None, "lesson")
-
-    plugin.pytest_collectreport(
-        cast(pytest.CollectReport, CollectionReportWithoutLine())
-    )
-    locations = {
-        "test_inside": inside.name,
-        "test_outside": str(outside),
-        "test_missing": "missing.py",
-    }
-    for name, path in locations.items():
-        node_id = f"{path}::{name}"
-        plugin.pytest_runtest_logreport(_test_report(node_id, path=path))
-        plugin.pytest_runtest_logfinish(node_id, (path, 0, name))
-
-    results = {
-        event["test"]["name"]: event["test"]
-        for event_type, event in emitted
-        if event_type == "TEST_RESULT"
-    }
-    inside_url = _expected_editor_url(inside, 1)
-    assert results["test_inside"]["editor_url"] == inside_url
-    assert results["test_inside"]["phases"][0]["editor_url"] == inside_url
-    collection_error = next(
-        event for event_type, event in emitted if event_type == "TEST_ERROR"
-    )
-    assert collection_error["editor_url"] == _expected_editor_url(inside)
-    for name in ("test_outside", "test_missing"):
-        assert "editor_url" not in results[name]
-        assert "editor_url" not in results[name]["phases"][0]
-
-
 async def test_pytest_collection_error_is_structured_and_keeps_collection(
     tmp_path: Path,
 ) -> None:
@@ -662,7 +535,6 @@ async def test_pytest_collection_error_is_structured_and_keeps_collection(
         "line": 1,
         "column": 17,
         "end_column": 18,
-        "editor_url": _expected_editor_url(tmp_path / "test_broken.py", 1, 17),
         "source": "def test_broken(:",
         "details": (
             "test_broken.py:1:17\n"
@@ -705,7 +577,6 @@ async def test_pytest_syntax_error_points_to_imported_project_source(
     assert error["line"] == 1
     assert error["column"] == 13
     assert error["end_column"] == 14
-    assert error["editor_url"] == _expected_editor_url(tmp_path / "lesson.py", 1, 13)
     assert error["source"] == "def answer()"
     assert error["details"] == (
         "lesson.py:1:13\ndef answer()\n            ^\nSyntaxError: expected ':'"
