@@ -677,7 +677,7 @@ export function ModuleTests() {
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     <label className="label cursor-pointer gap-2 py-0">
-                        <span className="label-text">Autorun on changes</span>
+                        <span className="label-text">Autorun on save</span>
                         <input
                             checked={tests.autorun}
                             className="toggle toggle-primary"

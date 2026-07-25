@@ -107,7 +107,7 @@ Failures distinguish collection, fixture setup, test call, and fixture teardown
 errors. Assertion details and captured standard output, standard error, and logs
 are available directly in each test result.
 
-The **Autorun on changes** toggle is off by default and is saved in the browser.
+The **Autorun on save** toggle is off by default and is saved in the browser.
 When enabled, changes to any Python file in the project schedule a debounced
 rerun of the open test module. Changes detected during an active run are
 coalesced into one follow-up run, and repeated rapid reruns automatically pause

@@ -46,8 +46,7 @@ class WebSocketManager:
                 data = await client.receive_text()
                 event = WebSocketEvent.model_validate_json(data)
                 await self._receive_handler(client, event)
-        except Exception as e:
-            print(e)
+        except Exception:
             pass
         finally:
             self._clients.remove(client)
