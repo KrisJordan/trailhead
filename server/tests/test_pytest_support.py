@@ -527,11 +527,81 @@ async def test_pytest_collection_error_is_structured_and_keeps_collection(
 
     assert return_code != 0
     error = _events(socket, "TEST_ERROR")[0]
-    assert error["kind"] == "collection"
-    assert "SyntaxError" in error["details"]
+    assert error == {
+        "run_id": "run-1",
+        "kind": "collection",
+        "message": "SyntaxError: invalid syntax",
+        "path": "test_broken.py",
+        "line": 1,
+        "column": 17,
+        "end_column": 18,
+        "source": "def test_broken(:",
+        "details": (
+            "test_broken.py:1:17\n"
+            "def test_broken(:\n"
+            "                ^\n"
+            "SyntaxError: invalid syntax"
+        ),
+        "truncated": [],
+    }
+    primary = "\n".join(
+        str(error[field]) for field in ("message", "path", "source", "details")
+    )
+    assert "_pytest" not in primary
+    assert "importlib" not in primary
+    assert "<frozen" not in primary
     assert _events(socket, "TESTS_COLLECTED")[0]["tests"] == []
     finished = _events(socket, "TEST_RUN_FINISHED")[0]
     assert finished["status"] == "collection_error"
+
+
+async def test_pytest_syntax_error_points_to_imported_project_source(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "lesson.py").write_text(
+        "def answer()\n    return 42\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "test_lesson.py").write_text(
+        "from lesson import answer\n\ndef test_answer():\n    assert answer() == 42\n",
+        encoding="utf-8",
+    )
+
+    return_code, socket = await _run_pytest(tmp_path, "test_lesson", "collect")
+
+    assert return_code != 0
+    error = _events(socket, "TEST_ERROR")[0]
+    assert error["kind"] == "collection"
+    assert error["message"] == "SyntaxError: expected ':'"
+    assert error["path"] == "lesson.py"
+    assert error["line"] == 1
+    assert error["column"] == 13
+    assert error["end_column"] == 14
+    assert error["source"] == "def answer()"
+    assert error["details"] == (
+        "lesson.py:1:13\ndef answer()\n            ^\nSyntaxError: expected ':'"
+    )
+    assert "test_lesson.py" not in error["details"]
+    assert "site-packages" not in error["details"]
+
+
+async def test_pytest_non_syntax_collection_error_keeps_import_diagnostic(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "test_import_error.py").write_text(
+        "raise RuntimeError('student import failed')\n",
+        encoding="utf-8",
+    )
+
+    return_code, socket = await _run_pytest(tmp_path, "test_import_error", "collect")
+
+    assert return_code != 0
+    error = _events(socket, "TEST_ERROR")[0]
+    assert error["kind"] == "collection"
+    assert "RuntimeError: student import failed" in error["message"]
+    assert "RuntimeError: student import failed" in error["details"]
+    assert "column" not in error
+    assert "source" not in error
 
 
 async def test_pytest_usage_error_has_diagnostic_and_one_terminal_event(

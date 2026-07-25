@@ -71,6 +71,9 @@ export interface TestRunError {
     phase?: TestPhase;
     path?: string;
     line?: number;
+    column?: number;
+    end_column?: number;
+    source?: string;
     truncated?: string[];
 }
 

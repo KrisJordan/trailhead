@@ -56,7 +56,36 @@ function deriveTestSummary(
     return summary;
 }
 
-function StatusBadge({ outcome }: { outcome: TestOutcome }) {
+export function TestOutcomeIndicator({
+    outcome,
+}: {
+    outcome: TestOutcome;
+}) {
+    if (outcome === "passed") {
+        return (
+            <span
+                aria-label="Passed"
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success text-xs font-bold leading-none text-white"
+                role="img"
+                title="Passed"
+            >
+                <span aria-hidden="true">✓</span>
+            </span>
+        );
+    }
+    if (outcome === "failed" || outcome === "error") {
+        const label = outcome === "failed" ? "Failed" : "Error";
+        return (
+            <span
+                aria-label={label}
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-error text-xs font-bold leading-none text-white"
+                role="img"
+                title={label}
+            >
+                <span aria-hidden="true">✕</span>
+            </span>
+        );
+    }
     return (
         <span className={`badge badge-sm ${outcomeClasses[outcome]}`}>
             {outcome}
@@ -64,7 +93,7 @@ function StatusBadge({ outcome }: { outcome: TestOutcome }) {
     );
 }
 
-function Summary({
+export function Summary({
     summary,
     duration,
     cancelled,
@@ -221,7 +250,7 @@ function PhaseDetail({
             className={`rounded-box border p-4 ${phasePanelClasses(phase.outcome)}`}
         >
             <div className="mb-2 flex flex-wrap items-center gap-2">
-                <StatusBadge outcome={phase.outcome} />
+                <TestOutcomeIndicator outcome={phase.outcome} />
                 <h4 className="font-bold capitalize">{phase.phase} phase</h4>
                 {truncatedDetails.length > 0 && (
                     <span
@@ -294,34 +323,20 @@ export function ResultDetails({ result }: { result: TestResult }) {
     const hasDirectOutput = Boolean(
         result.stdout || result.stderr || result.log,
     );
+    const hasPhaseOutput = phases.some(
+        (phase) => phase.stdout || phase.stderr || phase.log,
+    );
     if (
-        phases.length === 0
+        detailPhases.length === 0
         && !directFailure
         && !hasDirectOutput
+        && !hasPhaseOutput
     ) {
         return null;
     }
 
     return (
         <div className="mt-3 grid gap-3">
-            {phases.length > 0 && (
-                <div className="flex flex-wrap gap-2" aria-label="Test phases">
-                    {phases.map((phase) => (
-                        <span
-                            className="inline-flex items-center gap-1 rounded border border-base-300 px-2 py-1 text-xs"
-                            key={phase.phase}
-                        >
-                            <span className="capitalize">{phase.phase}</span>
-                            <StatusBadge outcome={phase.outcome} />
-                            {formatDuration(phase.duration) && (
-                                <span className="opacity-60">
-                                    {formatDuration(phase.duration)}
-                                </span>
-                            )}
-                        </span>
-                    ))}
-                </div>
-            )}
             {(detailPhases.length > 0
                 ? detailPhases
                 : directFailure ? [directFailure] : []
@@ -369,8 +384,21 @@ export function ErrorPanel({ error }: { error: TestRunError }) {
         ? "Test collection failed"
         : "pytest could not complete the request";
     const truncatedDiagnostic = error.truncated?.filter(
-        (field) => field !== "details",
+        (field) => field !== "details" && field !== "source",
     ) ?? [];
+    const source = error.source;
+    const sourceLine = error.line?.toString() ?? "";
+    const sourceGutter = sourceLine
+        ? `${" ".repeat(sourceLine.length)} | `
+        : "";
+    const caret = source && error.column !== undefined
+        ? `${source
+            .slice(0, Math.max(error.column - 1, 0))
+            .replace(/[^\t]/g, " ")}${"^".repeat(Math.max(
+            (error.end_column ?? error.column + 1) - error.column,
+            1,
+        ))}`
+        : null;
     return (
         <div role="alert" className="alert alert-error items-start text-white">
             <div>
@@ -389,10 +417,33 @@ export function ErrorPanel({ error }: { error: TestRunError }) {
                     <code className="mb-2 block text-sm">
                         {error.path}
                         {error.line !== undefined ? `:${error.line}` : ""}
+                        {error.column !== undefined
+                            ? `:${error.column}`
+                            : ""}
                     </code>
                 )}
+                {source && (
+                    <div className="mb-2">
+                        <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
+                            Source
+                            {error.truncated?.includes("source") && (
+                                <span className="badge badge-warning badge-sm">
+                                    truncated
+                                </span>
+                            )}
+                        </div>
+                        <pre
+                            aria-label="Syntax error source"
+                            className="overflow-x-auto whitespace-pre rounded bg-neutral p-3 text-sm text-neutral-content"
+                        >
+                            {sourceLine ? `${sourceLine} | ` : ""}
+                            {source}
+                            {caret && `\n${sourceGutter}${caret}`}
+                        </pre>
+                    </div>
+                )}
                 <p className="whitespace-pre-wrap">{error.message}</p>
-                {error.details && (
+                {error.details && !source && (
                     <div className="mt-2">
                         <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
                             Details
@@ -477,7 +528,11 @@ function TestRow({
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         {result
-                            ? <StatusBadge outcome={result.outcome} />
+                            ? (
+                                <TestOutcomeIndicator
+                                    outcome={result.outcome}
+                                />
+                            )
                             : running
                                 ? (
                                     <span className="loading loading-spinner loading-xs" />
@@ -580,11 +635,6 @@ export function ModuleTests() {
             <header className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1">
                     <h1 className="text-2xl font-bold">Tests</h1>
-                    <p className="mt-1 text-sm opacity-70">
-                        {tests.collected.length > 0
-                            ? `${tests.collected.length} collected in ${module.info?.name ?? module.selected}`
-                            : `pytest results for ${module.info?.name ?? module.selected ?? "this module"}`}
-                    </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     <label className="label cursor-pointer gap-2 py-0">

@@ -232,7 +232,42 @@ describe("pytest socket middleware", () => {
             phase: undefined,
             path: undefined,
             line: undefined,
+            column: undefined,
+            end_column: undefined,
+            source: undefined,
             truncated: ["details"],
+        });
+    });
+
+    it("preserves structured syntax-error diagnostics", () => {
+        const { socket, store } = connectAndOpen();
+        const runId = store.getState().tests.activeRunId;
+
+        socket.emit("message", messageEvent("TEST_ERROR", {
+            run_id: runId,
+            kind: "collection",
+            message: "SyntaxError: invalid syntax",
+            path: "test_broken.py",
+            line: 1,
+            column: 17,
+            end_column: 18,
+            source: "def test_broken(:",
+            details: [
+                "test_broken.py:1:17",
+                "def test_broken(:",
+                "                ^",
+                "SyntaxError: invalid syntax",
+            ].join("\n"),
+        }));
+
+        expect(store.getState().tests.error).toMatchObject({
+            kind: "collection",
+            message: "SyntaxError: invalid syntax",
+            path: "test_broken.py",
+            line: 1,
+            column: 17,
+            end_column: 18,
+            source: "def test_broken(:",
         });
     });
 

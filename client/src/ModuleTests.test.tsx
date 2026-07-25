@@ -3,10 +3,102 @@ import { describe, expect, it } from "vitest";
 import {
     ErrorPanel,
     ResultDetails,
+    Summary,
+    TestOutcomeIndicator,
     TerminalStatus,
 } from "./ModuleTests";
 
 describe("pytest result presentation", () => {
+    it.each([
+        {
+            outcome: "passed" as const,
+            label: "Passed",
+            icon: "✓",
+            color: "bg-success",
+        },
+        {
+            outcome: "failed" as const,
+            label: "Failed",
+            icon: "✕",
+            color: "bg-error",
+        },
+        {
+            outcome: "error" as const,
+            label: "Error",
+            icon: "✕",
+            color: "bg-error",
+        },
+    ])(
+        "renders $outcome as a compact accessible icon",
+        ({ outcome, label, icon, color }) => {
+            const markup = renderToStaticMarkup(
+                <TestOutcomeIndicator outcome={outcome} />,
+            );
+
+            expect(markup).toContain(`aria-label="${label}"`);
+            expect(markup).toContain(color);
+            expect(markup).toContain("rounded-full");
+            expect(markup).toContain(`>${icon}</span>`);
+            expect(markup).not.toContain(`>${outcome}</span>`);
+        },
+    );
+
+    it("keeps outcome counts as badges in the run summary", () => {
+        const markup = renderToStaticMarkup(
+            <Summary
+                cancelled={false}
+                duration={0.42}
+                summary={{ total: 3, passed: 2, failed: 1 }}
+            />,
+        );
+
+        expect(markup).toContain("2 passed");
+        expect(markup).toContain("1 failed");
+        expect(markup).toContain("badge-success");
+        expect(markup).toContain("badge-error");
+    });
+
+    it("omits phase-summary pills while retaining failure details", () => {
+        const markup = renderToStaticMarkup(
+            <ResultDetails
+                result={{
+                    node_id: "test_example.py::test_example",
+                    outcome: "failed",
+                    phases: [
+                        {
+                            phase: "setup",
+                            outcome: "passed",
+                            duration: 0.01,
+                        },
+                        {
+                            phase: "call",
+                            outcome: "failed",
+                            duration: 0.02,
+                            failure: {
+                                message: "assert 1 == 2",
+                                path: "test_example.py",
+                                line: 4,
+                            },
+                        },
+                        {
+                            phase: "teardown",
+                            outcome: "passed",
+                            duration: 0.01,
+                        },
+                    ],
+                }}
+            />,
+        );
+
+        expect(markup).not.toContain('aria-label="Test phases"');
+        expect(markup).not.toContain(">setup<");
+        expect(markup).not.toContain(">teardown<");
+        expect(markup).toContain("call phase");
+        expect(markup).toContain("assert 1 == 2");
+        expect(markup).toContain('aria-label="Failed"');
+        expect(markup).not.toContain(">failed</span>");
+    });
+
     it.each([
         {
             outcome: "skipped" as const,
@@ -78,5 +170,33 @@ describe("pytest result presentation", () => {
         expect(markup).toContain("partial traceback");
         expect(markup).toContain("truncated");
         expect(markup).toContain("diagnostic truncated");
+    });
+
+    it("renders a concise source frame for collection syntax errors", () => {
+        const markup = renderToStaticMarkup(
+            <ErrorPanel
+                error={{
+                    kind: "collection",
+                    message: "SyntaxError: invalid syntax",
+                    path: "test_broken.py",
+                    line: 1,
+                    column: 17,
+                    end_column: 18,
+                    source: "def test_broken(:",
+                    details: [
+                        "File \"/venv/lib/python/site-packages/_pytest/pathlib.py\"",
+                        "File \"<frozen importlib._bootstrap>\"",
+                    ].join("\n"),
+                }}
+            />,
+        );
+
+        expect(markup).toContain("Test collection failed");
+        expect(markup).toContain("test_broken.py:1:17");
+        expect(markup).toContain("def test_broken(:");
+        expect(markup).toContain("^");
+        expect(markup).toContain("SyntaxError: invalid syntax");
+        expect(markup).not.toContain("_pytest/pathlib.py");
+        expect(markup).not.toContain("importlib._bootstrap");
     });
 });

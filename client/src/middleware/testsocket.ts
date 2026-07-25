@@ -273,6 +273,10 @@ function normalizeError(value: unknown): TestRunError {
         phase: normalizePhase(source.phase),
         path: stringValue(source.path) ?? stringValue(payload.path),
         line: numberValue(source.line) ?? numberValue(payload.line),
+        column: numberValue(source.column) ?? numberValue(payload.column),
+        end_column: numberValue(source.end_column)
+            ?? numberValue(payload.end_column),
+        source: stringValue(source.source) ?? stringValue(payload.source),
         truncated: normalizeStringArray(
             source.truncated ?? payload.truncated,
         ),

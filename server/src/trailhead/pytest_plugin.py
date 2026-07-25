@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import json
 from pathlib import Path
+import re
 import time
 from typing import Any
 
@@ -19,6 +20,10 @@ from .pytest_protocol import (
 EventEmitter = Callable[[str, dict[str, Any]], None]
 MAX_COLLECTION_BYTES = 512 * 1024
 MAX_MARKERS = 256
+_TRACEBACK_FILE = re.compile(
+    r'^(?:E\s+)?\s*File "(?P<path>.+)", line (?P<line>\d+)\s*$',
+    re.MULTILINE,
+)
 
 
 def _portable_path(value: object) -> str:
@@ -41,6 +46,86 @@ def _location(value: object) -> tuple[str | None, int | None]:
     path = _portable_path(value[0])
     line = value[1]
     return path, line + 1 if isinstance(line, int) else None
+
+
+def _project_source_path(value: str) -> tuple[Path, str] | None:
+    """Resolve a traceback filename only when it belongs to this project."""
+
+    project_root = Path.cwd().resolve()
+    path = Path(value)
+    candidate = path if path.is_absolute() else project_root / path
+    try:
+        resolved = candidate.resolve()
+        relative = resolved.relative_to(project_root)
+    except (OSError, ValueError):
+        return None
+    if not resolved.is_file():
+        return None
+    return resolved, relative.as_posix()
+
+
+def _source_caret(source: str, column: int, end_column: int | None) -> str:
+    """Build a caret that preserves tab alignment in the original source."""
+
+    prefix = source[: max(column - 1, 0)]
+    padding = "".join("\t" if character == "\t" else " " for character in prefix)
+    width = max((end_column or column + 1) - column, 1)
+    return f"{padding}{'^' * width}"
+
+
+def _syntax_error_data(longrepr: str) -> dict[str, Any] | None:
+    """Recover a concise, structured SyntaxError from a project source file."""
+
+    file_matches = list(_TRACEBACK_FILE.finditer(longrepr))
+    for match in reversed(file_matches):
+        resolved_path = _project_source_path(match.group("path"))
+        if resolved_path is None:
+            continue
+        source_path, display_path = resolved_path
+        try:
+            source_bytes = source_path.read_bytes()
+            compile(source_bytes, str(source_path), "exec")
+        except SyntaxError as error:
+            line = error.lineno if isinstance(error.lineno, int) else None
+            column = error.offset if isinstance(error.offset, int) else None
+            end_column = error.end_offset if isinstance(error.end_offset, int) else None
+            source = (error.text or "").rstrip("\r\n")
+            message = f"{type(error).__name__}: {error.msg}"
+
+            location = display_path
+            if line is not None:
+                location += f":{line}"
+                if column is not None:
+                    location += f":{column}"
+            details_parts = [location]
+            if source:
+                details_parts.append(source)
+                if column is not None:
+                    details_parts.append(_source_caret(source, column, end_column))
+            details_parts.append(message)
+
+            bounded: dict[str, str] = {}
+            truncated: list[str] = []
+            for field, value in (
+                ("message", message),
+                ("path", display_path),
+                ("source", source),
+                ("details", "\n".join(details_parts)),
+            ):
+                bounded[field], was_truncated = limited_text(value)
+                if was_truncated:
+                    truncated.append(field)
+            return {
+                "kind": "collection",
+                **bounded,
+                "line": line,
+                "column": column,
+                "end_column": end_column,
+                "truncated": truncated,
+            }
+        except OSError:
+            continue
+    return None
 
 
 def _bounded_optional_text(
@@ -384,7 +469,12 @@ class TrailheadPytestPlugin:
         if not report.failed:
             return
         self._collection_errors += 1
-        longrepr, was_truncated = limited_text(report.longrepr)
+        raw_longrepr = str(report.longrepr)
+        syntax_error = _syntax_error_data(raw_longrepr)
+        if syntax_error is not None:
+            self._emit("TEST_ERROR", syntax_error)
+            return
+        longrepr, was_truncated = limited_text(raw_longrepr)
         path, line = _location(getattr(report, "location", None))
         path, path_truncated = _bounded_optional_text(path)
         message = next(
