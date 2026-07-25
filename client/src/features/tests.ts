@@ -17,6 +17,7 @@ export interface CollectedTest {
     name: string;
     path?: string;
     line?: number;
+    editor_url?: string;
     markers?: string[];
     truncated?: string[];
 }
@@ -34,6 +35,7 @@ export interface TestFailure {
     traceback?: string;
     path?: string;
     line?: number;
+    editor_url?: string;
 }
 
 export interface TestPhaseResult extends CapturedTestOutput {
@@ -52,6 +54,7 @@ export interface TestResult extends CapturedTestOutput {
     name?: string;
     path?: string;
     line?: number;
+    editor_url?: string;
     markers?: string[];
     outcome: TestOutcome;
     duration?: number;
@@ -74,7 +77,36 @@ export interface TestRunError {
     column?: number;
     end_column?: number;
     source?: string;
+    editor_url?: string;
     truncated?: string[];
+}
+
+export function normalizeEditorUrl(value: unknown): string | undefined {
+    if (
+        typeof value !== "string"
+        || !value.startsWith("vscode://file/")
+    ) {
+        return undefined;
+    }
+    try {
+        const parsed = new URL(value);
+        if (
+            parsed.protocol !== "vscode:"
+            || parsed.hostname !== "file"
+            || parsed.username
+            || parsed.password
+            || parsed.port
+            || parsed.pathname === "/"
+            || parsed.search
+            || parsed.hash
+            || parsed.href !== value
+        ) {
+            return undefined;
+        }
+    } catch {
+        return undefined;
+    }
+    return value;
 }
 
 export type TestSessionStatus =

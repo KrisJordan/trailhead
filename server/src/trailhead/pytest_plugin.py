@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import json
-from pathlib import Path
+from pathlib import Path, PurePath
 import re
 import time
 from typing import Any
+from urllib.parse import quote
 
 import pytest
 
@@ -64,6 +65,53 @@ def _project_source_path(value: str) -> tuple[Path, str] | None:
     return resolved, relative.as_posix()
 
 
+def _editor_url(
+    value: object | None,
+    line: int | None = None,
+    column: int | None = None,
+) -> str | None:
+    """Build a bounded VS Code URL for an existing project source file."""
+
+    if value is None:
+        return None
+    source_path = _project_source_path(str(value))
+    if source_path is None:
+        return None
+
+    resolved_path, _ = source_path
+    return _editor_url_for_path(resolved_path, line, column)
+
+
+def _editor_url_for_path(
+    path: PurePath,
+    line: int | None = None,
+    column: int | None = None,
+) -> str | None:
+    """Format an already validated local, drive, or UNC source path."""
+
+    portable_path = path.as_posix()
+    if portable_path.startswith("/"):
+        portable_path = portable_path[1:]
+    if re.match(r"^[A-Za-z]:/", portable_path):
+        encoded_path = f"{portable_path[:2]}{quote(portable_path[2:], safe='/')}"
+    else:
+        encoded_path = quote(portable_path, safe="/")
+    if not encoded_path:
+        return None
+
+    url = f"vscode://file/{encoded_path}"
+    if isinstance(line, int) and not isinstance(line, bool) and line > 0:
+        safe_column = (
+            column
+            if isinstance(column, int) and not isinstance(column, bool) and column > 0
+            else 1
+        )
+        url += f":{line}:{safe_column}"
+
+    bounded_url, was_truncated = limited_text(url, MAX_METADATA_BYTES)
+    return None if was_truncated else bounded_url
+
+
 def _source_caret(source: str, column: int, end_column: int | None) -> str:
     """Build a caret that preserves tab alignment in the original source."""
 
@@ -115,12 +163,14 @@ def _syntax_error_data(longrepr: str) -> dict[str, Any] | None:
                 bounded[field], was_truncated = limited_text(value)
                 if was_truncated:
                     truncated.append(field)
+            editor_url = _editor_url(source_path, line, column)
             return {
                 "kind": "collection",
                 **bounded,
                 "line": line,
                 "column": column,
                 "end_column": end_column,
+                **({"editor_url": editor_url} if editor_url else {}),
                 "truncated": truncated,
             }
         except OSError:
@@ -182,6 +232,7 @@ def _test_metadata(item: pytest.Item, node_id: str) -> dict[str, Any]:
     """Build bounded display metadata around an exact, safe node ID."""
 
     path, line = _location(item.location)
+    editor_url = _editor_url(path, line)
     name, name_truncated = limited_text(item.name, MAX_METADATA_BYTES)
     path, path_truncated = _bounded_optional_text(path)
     markers, markers_truncated = _bounded_markers(item)
@@ -199,6 +250,7 @@ def _test_metadata(item: pytest.Item, node_id: str) -> dict[str, Any]:
         "name": name,
         "path": path,
         "line": line,
+        **({"editor_url": editor_url} if editor_url else {}),
         "markers": markers,
         "truncated": truncated,
     }
@@ -210,6 +262,7 @@ def _fallback_test_metadata(
     """Build bounded metadata if pytest did not expose the item at collection."""
 
     path, line = _location(location)
+    editor_url = _editor_url(path, line)
     name, name_truncated = limited_text(node_id.rsplit("::", 1)[-1], MAX_METADATA_BYTES)
     path, path_truncated = _bounded_optional_text(path)
     return {
@@ -217,6 +270,7 @@ def _fallback_test_metadata(
         "name": name,
         "path": path,
         "line": line,
+        **({"editor_url": editor_url} if editor_url else {}),
         "markers": [],
         "truncated": [
             field
@@ -322,6 +376,7 @@ def _phase(
         truncated.append("path")
     if reason_truncated:
         truncated.append("reason")
+    editor_url = _editor_url(path, line)
 
     return {
         "phase": report.when,
@@ -331,6 +386,7 @@ def _phase(
         "longrepr": normalized["longrepr"],
         "path": path,
         "line": line,
+        **({"editor_url": editor_url} if editor_url else {}),
         "reason": reason,
         "stdout": normalized["stdout"],
         "stderr": normalized["stderr"],
@@ -476,6 +532,7 @@ class TrailheadPytestPlugin:
             return
         longrepr, was_truncated = limited_text(raw_longrepr)
         path, line = _location(getattr(report, "location", None))
+        editor_url = _editor_url(path, line)
         path, path_truncated = _bounded_optional_text(path)
         message = next(
             (candidate for candidate in reversed(longrepr.splitlines()) if candidate),
@@ -488,6 +545,7 @@ class TrailheadPytestPlugin:
                 "message": message,
                 "path": path,
                 "line": line,
+                **({"editor_url": editor_url} if editor_url else {}),
                 "details": longrepr,
                 "truncated": [
                     field

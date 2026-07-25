@@ -138,6 +138,10 @@ describe("pytest socket middleware", () => {
     });
 
     it("normalizes collected tests and phase-level results", () => {
+        const testEditorUrl =
+            "vscode://file/Users/student/project/test_example.py:4:1";
+        const failureEditorUrl =
+            "vscode://file/Users/student/project/example.py:8:1";
         const { socket, store } = connectAndOpen();
         const collectRunId = store.getState().tests.activeRunId;
         socket.emit("message", messageEvent("TEST_RUN_STARTED", {
@@ -153,9 +157,13 @@ describe("pytest socket middleware", () => {
                 name: "test_value",
                 path: "test_example.py",
                 line: 4,
+                editor_url: testEditorUrl,
                 markers: ["unit"],
             }],
         }));
+        expect(store.getState().tests.collected[0].editor_url).toBe(
+            testEditorUrl,
+        );
         finishCurrentOperation(socket, store);
 
         store.dispatch({
@@ -176,6 +184,7 @@ describe("pytest socket middleware", () => {
                 name: "test_value",
                 path: "test_example.py",
                 line: 4,
+                editor_url: testEditorUrl,
                 markers: ["unit"],
                 outcome: "failed",
                 duration: 0.02,
@@ -186,6 +195,12 @@ describe("pytest socket middleware", () => {
                     reason: "known defect",
                     message: "assert 1 == 2",
                     longrepr: "E assert 1 == 2",
+                    failure: {
+                        message: "assert 1 == 2",
+                        path: "example.py",
+                        line: 8,
+                        editor_url: failureEditorUrl,
+                    },
                     stdout: "value was 1\n",
                     stderr: "",
                     log: "debug record\n",
@@ -201,11 +216,18 @@ describe("pytest socket middleware", () => {
         ).toMatchObject({
             outcome: "failed",
             duration: 0.02,
+            editor_url: testEditorUrl,
             phases: [{
                 phase: "call",
                 reason: "known defect",
                 message: "assert 1 == 2",
                 longrepr: "E assert 1 == 2",
+                failure: {
+                    message: "assert 1 == 2",
+                    path: "example.py",
+                    line: 8,
+                    editor_url: failureEditorUrl,
+                },
                 stdout: "value was 1\n",
                 log: "debug record\n",
                 truncated: ["stdout"],
@@ -235,6 +257,7 @@ describe("pytest socket middleware", () => {
             column: undefined,
             end_column: undefined,
             source: undefined,
+            editor_url: undefined,
             truncated: ["details"],
         });
     });
@@ -252,6 +275,8 @@ describe("pytest socket middleware", () => {
             column: 17,
             end_column: 18,
             source: "def test_broken(:",
+            editor_url:
+                "vscode://file/Users/student/project/test_broken.py:1:17",
             details: [
                 "test_broken.py:1:17",
                 "def test_broken(:",
@@ -268,7 +293,62 @@ describe("pytest socket middleware", () => {
             column: 17,
             end_column: 18,
             source: "def test_broken(:",
+            editor_url:
+                "vscode://file/Users/student/project/test_broken.py:1:17",
         });
+    });
+
+    it("rejects non-VS-Code editor URLs from pytest messages", () => {
+        const { socket, store } = connectAndOpen();
+        const collectionRunId = store.getState().tests.activeRunId;
+
+        socket.emit("message", messageEvent("TESTS_COLLECTED", {
+            run_id: collectionRunId,
+            tests: [{
+                node_id: "test_example.py::test_value",
+                name: "test_value",
+                path: "test_example.py",
+                line: 4,
+                editor_url: "javascript:alert('unexpected')",
+            }],
+        }));
+        expect(store.getState().tests.collected[0].editor_url).toBeUndefined();
+        finishCurrentOperation(socket, store);
+        store.dispatch({ type: "testsocket/run" });
+        const runId = store.getState().tests.activeRunId;
+
+        socket.emit("message", messageEvent("TEST_RESULT", {
+            run_id: runId,
+            test: {
+                node_id: "test_example.py::test_value",
+                outcome: "failed",
+                editor_url: "https://example.com/test_example.py",
+                phases: [{
+                    phase: "call",
+                    outcome: "failed",
+                    failure: {
+                        message: "assert False",
+                        path: "test_example.py",
+                        line: 4,
+                        editor_url: "command:workbench.action.closeWindow",
+                    },
+                }],
+            },
+        }));
+        const result =
+            store.getState().tests.results["test_example.py::test_value"];
+        expect(result.editor_url).toBeUndefined();
+        expect(result.phases?.[0].failure?.editor_url).toBeUndefined();
+
+        socket.emit("message", messageEvent("TEST_ERROR", {
+            run_id: runId,
+            kind: "collection",
+            message: "collection failed",
+            path: "test_example.py",
+            line: 4,
+            editor_url: "https://example.com/test_example.py",
+        }));
+        expect(store.getState().tests.error?.editor_url).toBeUndefined();
     });
 
     it("does not send a second operation while pytest is busy", () => {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./app/store";
 import {
@@ -10,6 +10,7 @@ import {
     TestRunError,
     TestSummary,
     TestsState,
+    normalizeEditorUrl,
     resumeTestAutorun,
     setTestAutorun,
 } from "./features/tests";
@@ -35,6 +36,33 @@ const outcomeClasses: Record<TestOutcome, string> = {
     xpassed: "badge-warning",
     cancelled: "badge-neutral text-white",
 };
+
+export function SourceLink({
+    children,
+    editorUrl,
+    label,
+    className,
+}: {
+    children: ReactNode;
+    editorUrl?: string;
+    label: string;
+    className?: string;
+}) {
+    const safeEditorUrl = normalizeEditorUrl(editorUrl);
+    if (!safeEditorUrl) {
+        return <span className={className}>{children}</span>;
+    }
+    return (
+        <a
+            aria-label={`Open ${label} in VS Code`}
+            className={`link ${className ?? ""}`}
+            href={safeEditorUrl}
+            title="Open in VS Code"
+        >
+            {children}
+        </a>
+    );
+}
 
 function formatDuration(duration?: number | null): string | null {
     if (duration === undefined || duration === null) {
@@ -231,6 +259,15 @@ function PhaseDetail({
     const traceback = failure?.traceback;
     const path = failure?.path ?? result.path;
     const line = failure?.line ?? result.line;
+    const location = `${path ?? result.node_id}${
+        line !== undefined ? `:${line}` : ""
+    }`;
+    const hasFailureLocation = Boolean(
+        failure?.path || failure?.line !== undefined,
+    );
+    const editorUrl = failure?.editor_url ?? (
+        hasFailureLocation ? undefined : result.editor_url
+    );
     const truncatedDetails = phase.truncated?.filter(
         (field) => !["stdout", "stderr", "log"].includes(field),
     ) ?? [];
@@ -262,8 +299,12 @@ function PhaseDetail({
                 )}
                 {(path || line !== undefined) && (
                     <code className="text-xs opacity-75">
-                        {path ?? result.node_id}
-                        {line !== undefined ? `:${line}` : ""}
+                        <SourceLink
+                            editorUrl={editorUrl}
+                            label={location}
+                        >
+                            {location}
+                        </SourceLink>
                     </code>
                 )}
             </div>
@@ -399,6 +440,9 @@ export function ErrorPanel({ error }: { error: TestRunError }) {
             1,
         ))}`
         : null;
+    const location = `${error.path ?? ""}${
+        error.line !== undefined ? `:${error.line}` : ""
+    }${error.column !== undefined ? `:${error.column}` : ""}`;
     return (
         <div role="alert" className="alert alert-error items-start text-white">
             <div>
@@ -415,11 +459,12 @@ export function ErrorPanel({ error }: { error: TestRunError }) {
                 </div>
                 {(error.path || error.line !== undefined) && (
                     <code className="mb-2 block text-sm">
-                        {error.path}
-                        {error.line !== undefined ? `:${error.line}` : ""}
-                        {error.column !== undefined
-                            ? `:${error.column}`
-                            : ""}
+                        <SourceLink
+                            editorUrl={error.editor_url}
+                            label={location}
+                        >
+                            {location}
+                        </SourceLink>
                     </code>
                 )}
                 {source && (
@@ -508,7 +553,7 @@ export function TerminalStatus({
     );
 }
 
-function TestRow({
+export function TestRow({
     test,
     result,
     running,
@@ -522,6 +567,10 @@ function TestRow({
     onRun: () => void;
 }) {
     const duration = formatDuration(result?.duration);
+    const editorUrl = result?.editor_url ?? test.editor_url;
+    const location = `${test.path ?? ""}${
+        test.line !== undefined ? `:${test.line}` : ""
+    }`;
     return (
         <article className="rounded-box border border-base-300 bg-base-100 p-4">
             <div className="flex flex-wrap items-start gap-3">
@@ -538,8 +587,14 @@ function TestRow({
                                     <span className="loading loading-spinner loading-xs" />
                                 )
                                 : <span className="badge badge-ghost">not run</span>}
-                        <h3 className="break-all font-mono font-semibold">
-                            {test.name}
+                        <h3 className="font-mono font-semibold">
+                            <SourceLink
+                                className="break-all"
+                                editorUrl={editorUrl}
+                                label={`test ${test.name}`}
+                            >
+                                {test.name}
+                            </SourceLink>
                         </h3>
                         {test.truncated && test.truncated.length > 0 && (
                             <span
@@ -560,8 +615,13 @@ function TestRow({
                     </code>
                     {(test.path || test.line !== undefined) && (
                         <div className="mt-1 text-xs opacity-60">
-                            {test.path}
-                            {test.line !== undefined ? `:${test.line}` : ""}
+                            <SourceLink
+                                className="break-all"
+                                editorUrl={editorUrl}
+                                label={location}
+                            >
+                                {location}
+                            </SourceLink>
                         </div>
                     )}
                     {test.markers && test.markers.length > 0 && (

@@ -11,6 +11,7 @@ import {
     TestSummary,
     TestsState,
     endTestSession,
+    normalizeEditorUrl,
     pauseTestAutorun,
     projectPythonChanged,
     resumeTestAutorun,
@@ -143,6 +144,9 @@ function normalizeCollectedTest(value: unknown): CollectedTest | null {
             ?? nodeParts[nodeParts.length - 1],
         path: stringValue(item.path) ?? stringValue(location.path),
         line: numberValue(item.line) ?? numberValue(location.line),
+        editor_url: normalizeEditorUrl(
+            item.editor_url ?? location.editor_url,
+        ),
         markers: normalizeMarkers(item.markers),
         truncated: normalizeStringArray(item.truncated),
     };
@@ -172,7 +176,8 @@ function normalizeFailure(
     value: Record<string, unknown>,
 ): TestFailure | undefined {
     const nested = record(value.failure);
-    const source = Object.keys(nested).length > 0 ? nested : value;
+    const hasNestedFailure = Object.keys(nested).length > 0;
+    const source = hasNestedFailure ? nested : value;
     const location = record(source.location);
     const message = stringValue(source.message);
     const longrepr = printable(source.longrepr ?? value.longrepr);
@@ -187,6 +192,9 @@ function normalizeFailure(
         traceback,
         path: stringValue(source.path) ?? stringValue(location.path),
         line: numberValue(source.line) ?? numberValue(location.line),
+        editor_url: normalizeEditorUrl(
+            source.editor_url ?? value.editor_url,
+        ),
     };
     return failure;
 }
@@ -228,6 +236,7 @@ function normalizeTestResult(value: unknown): TestResult | null {
         name: stringValue(result.name),
         path: stringValue(result.path),
         line: numberValue(result.line),
+        editor_url: normalizeEditorUrl(result.editor_url),
         markers: normalizeMarkers(result.markers),
         outcome: normalizeOutcome(result.outcome),
         duration: numberValue(result.duration),
@@ -258,6 +267,7 @@ function normalizeError(value: unknown): TestRunError {
             kind: stringValue(payload.kind),
             message: nestedError,
             details: stringValue(payload.details),
+            editor_url: normalizeEditorUrl(payload.editor_url),
             truncated: normalizeStringArray(payload.truncated),
         };
     }
@@ -277,6 +287,9 @@ function normalizeError(value: unknown): TestRunError {
         end_column: numberValue(source.end_column)
             ?? numberValue(payload.end_column),
         source: stringValue(source.source) ?? stringValue(payload.source),
+        editor_url: normalizeEditorUrl(
+            source.editor_url ?? payload.editor_url,
+        ),
         truncated: normalizeStringArray(
             source.truncated ?? payload.truncated,
         ),
