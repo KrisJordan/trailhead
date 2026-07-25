@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
+import sys
 from typing import Any, Literal, cast
 
 from fastapi import WebSocket
@@ -576,7 +577,8 @@ async def test_pytest_syntax_error_points_to_imported_project_source(
     assert error["path"] == "lesson.py"
     assert error["line"] == 1
     assert error["column"] == 13
-    assert error["end_column"] == 14
+    expected_end_column = 13 if sys.version_info < (3, 12) else 14
+    assert error["end_column"] == expected_end_column
     assert error["source"] == "def answer()"
     assert error["details"] == (
         "lesson.py:1:13\ndef answer()\n            ^\nSyntaxError: expected ':'"
