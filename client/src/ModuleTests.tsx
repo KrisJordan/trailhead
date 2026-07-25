@@ -93,6 +93,19 @@ export function TestOutcomeIndicator({
     );
 }
 
+export function NotRunIndicator() {
+    return (
+        <span
+            aria-label="Not run"
+            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-base-300 text-xs font-bold leading-none text-base-content/60"
+            role="img"
+            title="Not run"
+        >
+            <span aria-hidden="true">−</span>
+        </span>
+    );
+}
+
 export function Summary({
     summary,
     duration,
@@ -270,7 +283,15 @@ function PhaseDetail({
         >
             <div className="mb-2 flex flex-wrap items-center gap-2">
                 <TestOutcomeIndicator outcome={phase.outcome} />
-                <h4 className="font-bold capitalize">{phase.phase} phase</h4>
+                {isFailure
+                    ? line !== undefined && (
+                        <h4 className="font-bold">Line {line}</h4>
+                    )
+                    : (
+                        <h4 className="font-bold capitalize">
+                            {phase.phase} phase
+                        </h4>
+                    )}
                 {truncatedDetails.length > 0 && (
                     <span
                         className="badge badge-warning badge-sm"
@@ -279,7 +300,7 @@ function PhaseDetail({
                         details truncated
                     </span>
                 )}
-                {location && (
+                {!isFailure && location && (
                     <code className="text-xs opacity-75">
                         {location}
                     </code>
@@ -507,6 +528,9 @@ export function TerminalStatus({
     if (successful) {
         return null;
     }
+    if (finishStatus === "failed") {
+        return null;
+    }
 
     const displayStatus = finishStatus
         ? finishStatus.replaceAll("_", " ")
@@ -557,7 +581,7 @@ export function TestRow({
                                 ? (
                                     <span className="loading loading-spinner loading-xs" />
                                 )
-                                : <span className="badge badge-ghost">not run</span>}
+                                : <NotRunIndicator />}
                         <h3 className="break-all font-mono font-semibold">
                             {test.name}
                         </h3>

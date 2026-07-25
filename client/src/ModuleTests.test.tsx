@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
     ErrorPanel,
+    NotRunIndicator,
     ResultDetails,
     Summary,
     TestCountHeading,
@@ -44,6 +45,16 @@ describe("pytest result presentation", () => {
             expect(markup).not.toContain(`>${outcome}</span>`);
         },
     );
+
+    it("renders an unrun test as a compact neutral icon", () => {
+        const markup = renderToStaticMarkup(<NotRunIndicator />);
+
+        expect(markup).toContain('aria-label="Not run"');
+        expect(markup).toContain("bg-base-300");
+        expect(markup).toContain("rounded-full");
+        expect(markup).toContain(">−</span>");
+        expect(markup).not.toContain(">not run</span>");
+    });
 
     it("keeps outcome counts as badges in the run summary", () => {
         const markup = renderToStaticMarkup(
@@ -130,11 +141,12 @@ describe("pytest result presentation", () => {
         expect(markup).not.toContain('aria-label="Test phases"');
         expect(markup).not.toContain(">setup<");
         expect(markup).not.toContain(">teardown<");
-        expect(markup).toContain("call phase");
+        expect(markup).toContain(">Line 4</h4>");
         expect(markup).toContain("assert 1 == 2");
         expect(markup).toContain('aria-label="Failed"');
         expect(markup).not.toContain(">failed</span>");
-        expect(markup).toContain("test_example.py · Line 4");
+        expect(markup).not.toContain("call phase");
+        expect(markup).not.toContain("test_example.py");
         expect(markup).not.toMatch(/<a(?:\s|>)/);
     });
 
@@ -189,6 +201,14 @@ describe("pytest result presentation", () => {
     it("does not render a terminal warning for a successful run", () => {
         const markup = renderToStaticMarkup(
             <TerminalStatus exitCode={0} finishStatus="passed" />,
+        );
+
+        expect(markup).toBe("");
+    });
+
+    it("does not render a redundant terminal warning for failed tests", () => {
+        const markup = renderToStaticMarkup(
+            <TerminalStatus exitCode={1} finishStatus="failed" />,
         );
 
         expect(markup).toBe("");
