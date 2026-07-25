@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 from pathlib import Path
 import sys
 from typing import Any, Literal, cast
@@ -308,7 +307,7 @@ async def test_pytest_results_include_all_outcomes_phases_and_captured_output(
     passing_call = next(
         phase for phase in results["test_passes"]["phases"] if phase["phase"] == "call"
     )
-    assert passing_call["stdout"] == f"captured hello{os.linesep}"
+    assert passing_call["stdout"] == "captured hello\n"
     failing_call = next(
         phase for phase in results["test_fails"]["phases"] if phase["phase"] == "call"
     )
